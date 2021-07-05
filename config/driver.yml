@@ -6,5 +6,5 @@ meta:
   site: example
   comment: example tag list
 modbus:
-  target:
-  mode:
+  mode: tcp
+  target: 192.168.10.1:502

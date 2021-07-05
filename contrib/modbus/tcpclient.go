@@ -276,7 +276,7 @@ func (mb *tcpTransporter) closeIdle() {
 	if mb.IdleTimeout <= 0 {
 		return
 	}
-	idle := time.Now().Sub(mb.lastActivity)
+	idle := time.Since(mb.lastActivity)
 	if idle >= mb.IdleTimeout {
 		mb.logf("modbus: closing connection due to idle timeout: %v", idle)
 		mb.close()

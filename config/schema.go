@@ -32,4 +32,6 @@ type Driver struct {
 }
 
 type DriverModbus struct {
+	Mode   string
+	Target string
 }

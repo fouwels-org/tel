@@ -157,6 +157,10 @@ func (m *Modbus) ioread() error {
 		if err != nil {
 			return fmt.Errorf("index for %v could not be parsed: %w", v, err)
 		}
+
+		if pindex > 65535 {
+			return fmt.Errorf("index exceeds 65535, will not process: %v", pindex)
+		}
 		index := uint16(pindex)
 
 		switch strings.ToLower(objectType) {

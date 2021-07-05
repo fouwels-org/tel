@@ -11,45 +11,39 @@ tags:
     description: bool valve
     type: bool
     default_value: 1
+    index: C.0
 
   - name: VALVE_CLOSED
     namespace: TAGS
     description: bool valve
     type: bool
     default_value: 0
+    index: D.0
 
   - name: FLOW_A
     namespace: TAGS
-    description: int16 flow
+    description: uint16 flow
     type: int16
     default_value: -325
+    index: I.0
 
   - name: FLOW_B
     namespace: TAGS
     description: uint16 flow
     type: uint16
     default_value: 325
+    index: I.0
 
-  - name: PRESSURE_A
+  - name: FLOW_C
     namespace: TAGS
-    description: int32 flow
-    type: int32
-    default_value: 325
+    description: uint16 flow
+    type: int16
+    default_value: -325
+    index: H.0
 
-  - name: PRESSURE_B
+  - name: FLOW_D
     namespace: TAGS
-    description: uint32 flow
-    type: uint32
+    description: uint16 flow
+    type: uint16
     default_value: 325
-
-  - name: FLEX_A
-    namespace: TAGS_B
-    description: float32 flex
-    type: float32
-    default_value: 3252.2
-
-  - name: FLEX_B
-    namespace: TAGS_B
-    description: float64 flex
-    type: float64
-    default_value: -267
+    index: H.0

@@ -7,4 +7,6 @@ meta:
   comment: example tag list
 modbus:
   mode: tcp
-  target: 192.168.10.1:502
+  target: localhost:5002
+  timeout_ms: 1000
+  slave: 1

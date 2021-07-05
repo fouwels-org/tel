@@ -25,13 +25,17 @@ type TagListTag struct {
 	Description  string
 	Type         string
 	DefaultValue float64 `yaml:"default_value"`
+	Index        string
 }
 
 type Driver struct {
+	Meta   TagListMeta
 	Modbus DriverModbus
 }
 
 type DriverModbus struct {
-	Mode   string
-	Target string
+	Mode      string
+	Target    string
+	TimeoutMs int `yaml:"timeout_ms"`
+	Slave     uint8
 }

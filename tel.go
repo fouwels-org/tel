@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -14,21 +15,22 @@ import (
 )
 
 type Driver interface {
-	Run() error
+	Run(ctx context.Context) error
 }
 
 func main() {
-	err := run()
+	ctx, ctxx := context.WithCancel(context.Background())
+	err := run(ctx)
 	if err != nil {
-		log.Printf("%v", err)
+		log.Printf("err: %v", err)
 	} else {
 		log.Printf("exit without error?: %v", err)
 	}
-
+	ctxx()
 	os.Exit(1)
 }
 
-func run() error {
+func run(ctx context.Context) error {
 
 	cTagList := os.Getenv("CONFIG_TAGLIST")
 	cConfigDrivers := os.Getenv("CONFIG_DRIVERS")
@@ -56,7 +58,7 @@ func run() error {
 		return fmt.Errorf("failed to open %v: %w", cTagList, err)
 	}
 
-	f2, err := os.Open(filepath.Clean(cDriver))
+	f2, err := os.Open(filepath.Clean(cConfigDrivers))
 	if err != nil {
 		return fmt.Errorf("failed to open %v: %w", cTagList, err)
 	}
@@ -75,7 +77,7 @@ func run() error {
 
 	switch cDriver {
 	case "modbus":
-		d, err := modbus.NewModbus(c.Driver.Modbus, cOpc)
+		d, err := modbus.NewModbus(c.Driver.Modbus, c.TagList, cOpc)
 		if err != nil {
 			return fmt.Errorf("failed to create modbus driver: %w", err)
 		}
@@ -84,5 +86,5 @@ func run() error {
 		return fmt.Errorf("driver %v not recognised", cDriver)
 	}
 
-	return driver.Run()
+	return driver.Run(ctx)
 }

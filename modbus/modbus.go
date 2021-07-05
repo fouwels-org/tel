@@ -125,8 +125,8 @@ func (m *Modbus) Run(ctx context.Context) error {
 
 func (m *Modbus) eventLoop(ctx context.Context, opchan chan *opcua.PublishNotificationData) error {
 
-	ticker := time.NewTicker(1 * time.Millisecond)
-	ioread := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	ioread := time.NewTicker(time.Duration(m.c.ScantimeMs) * time.Millisecond)
 
 	for range ticker.C {
 		select {
@@ -135,7 +135,7 @@ func (m *Modbus) eventLoop(ctx context.Context, opchan chan *opcua.PublishNotifi
 		case <-ioread.C:
 			err := m.ioread()
 			if err != nil {
-				return fmt.Errorf("io read failed: %w", err)
+				return fmt.Errorf("failed to read io: %w", err)
 			}
 		case o := <-opchan:
 			log.Printf("opc sub: %+v", o)
@@ -167,29 +167,25 @@ func (m *Modbus) ioread() error {
 		case "c":
 			result, err := m.conn.ReadCoils(index, 1)
 			if err != nil {
-				log.Printf("failed to read coil: %v", err)
-				continue
+				return fmt.Errorf("failed to read coil: %w", err)
 			}
 			m.buffer.coils[index] = result[0]
 		case "d":
 			result, err := m.conn.ReadDiscreteInputs(index, 1)
 			if err != nil {
-				log.Printf("failed to read discrete: %v", err)
-				continue
+				return fmt.Errorf("failed to read discrete: %w", err)
 			}
 			m.buffer.discretes[index] = result[0]
 		case "i":
 			result, err := m.conn.ReadInputRegisters(index, 1)
 			if err != nil {
-				log.Printf("failed to read input reg: %v", err)
-				continue
+				return fmt.Errorf("failed to read input reg: %w", err)
 			}
 			m.buffer.input[index] = binary.BigEndian.Uint16(result)
 		case "h":
 			result, err := m.conn.ReadHoldingRegisters(index, 1)
 			if err != nil {
-				log.Printf("failed to read discrete: %v", err)
-				continue
+				return fmt.Errorf("failed to read discrete: %w", err)
 			}
 			m.buffer.holding[index] = binary.BigEndian.Uint16(result)
 		}

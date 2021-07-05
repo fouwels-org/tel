@@ -8,5 +8,6 @@ meta:
 modbus:
   mode: tcp
   target: localhost:5002
+  scantime_ms: 100
   timeout_ms: 1000
   slave: 1

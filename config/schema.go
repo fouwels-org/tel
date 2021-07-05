@@ -34,8 +34,9 @@ type Driver struct {
 }
 
 type DriverModbus struct {
-	Mode      string
-	Target    string
-	TimeoutMs int `yaml:"timeout_ms"`
-	Slave     uint8
+	Mode       string
+	Target     string
+	ScantimeMs int `yaml:"scantime_ms"`
+	TimeoutMs  int `yaml:"timeout_ms"`
+	Slave      uint8
 }

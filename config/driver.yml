@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2021 Kaelan Thijs Fouwels <kaelan.thijs@fouwels.com>
+#
+# SPDX-License-Identifier: MIT
+
+meta:
+  site: example
+  comment: example tag list
+modbus:
+  target:
+  mode:

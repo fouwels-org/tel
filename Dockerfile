@@ -8,6 +8,11 @@ FROM alpine:3.14.0 as build
 RUN apk add go
 
 ENV GOBIN=/build/out
+
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
 COPY . ./go
 RUN cd go && go install .
 

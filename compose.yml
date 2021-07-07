@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2021 Kaelan Thijs Fouwels <kaelan.thijs@fouwels.com>
+#
+# SPDX-License-Identifier: MIT
+
+services:
+  opc:
+    image: registry2.lagoni.co.uk/lagoni-engineering/tel:dev
+    build:
+      dockerfile: Dockerfile
+      context: "./"
+    environment: 
+        CONFIG_TAGLIST": config/taglist.yml
+        CONFIG_DRIVER": config/modbus.yml
+        OPC": opc.tcp://localhost:4840
+        DRIVER": modbus
+    volumes: 
+      - ./config/taglist.yml:/config/taglist.yml:ro
+    ports:
+      - 4840:4840

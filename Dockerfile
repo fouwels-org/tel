@@ -22,4 +22,4 @@ COPY --from=build /build/out /build/out
 RUN addgroup -S tel && adduser -S tel -G tel
 USER tel
 
-CMD ["/build/out/opc"]
+CMD ["/build/out/tel"]

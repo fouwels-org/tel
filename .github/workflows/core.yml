@@ -48,7 +48,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@master
 
-      - name: Downloading and extracting gosec ${{env.GOSEC_VERSION}}
+      - name: Downloading and extracting gosec -exclude=G307 ${{env.GOSEC_VERSION}}
         run: wget https://github.com/securego/gosec/releases/download/v${{env.GOSEC_VERSION}}/gosec_${{env.GOSEC_VERSION}}_${{env.ARCH}}.tar.gz -O gosec.tar.gz && tar -xzf gosec.tar.gz
 
       - name: Run gosec/MITRE static security scanner (init)

@@ -178,12 +178,19 @@ func (mb *tcpTransporter) Send(aduRequest []byte) (aduResponse []byte, err error
 	// Read length, ignore transaction & protocol id (4 bytes)
 	length := int(binary.BigEndian.Uint16(data[4:]))
 	if length <= 0 {
-		mb.flush(data[:])
+		err = mb.flush(data[:])
+		if err != nil {
+			log.Printf("failed to flush buffer: %v", err)
+		}
 		err = fmt.Errorf("modbus: length in response header '%v' must not be zero", length)
 		return
 	}
 	if length > (tcpMaxLength - (tcpHeaderSize - 1)) {
-		mb.flush(data[:])
+		err = mb.flush(data[:])
+		if err != nil {
+			log.Printf("failed to flush buffer: %v", err)
+		}
+
 		err = fmt.Errorf("modbus: length in response header '%v' must not greater than '%v'", length, tcpMaxLength-tcpHeaderSize+1)
 		return
 	}
@@ -279,6 +286,9 @@ func (mb *tcpTransporter) closeIdle() {
 	idle := time.Since(mb.lastActivity)
 	if idle >= mb.IdleTimeout {
 		mb.logf("modbus: closing connection due to idle timeout: %v", idle)
-		mb.close()
+		err := mb.close()
+		if err != nil {
+			log.Printf("failed to close tcp transporter: %v", err)
+		}
 	}
 }

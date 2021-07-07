@@ -4,11 +4,6 @@
 
 package config
 
-type Config struct {
-	TagList TagList
-	Driver  Driver
-}
-
 type TagList struct {
 	Meta TagListMeta
 	Tags []TagListTag
@@ -25,18 +20,4 @@ type TagListTag struct {
 	Description  string
 	Type         string
 	DefaultValue float64 `yaml:"default_value"`
-	Index        string
-}
-
-type Driver struct {
-	Meta   TagListMeta
-	Modbus DriverModbus
-}
-
-type DriverModbus struct {
-	Mode       string
-	Target     string
-	ScantimeMs int `yaml:"scantime_ms"`
-	TimeoutMs  int `yaml:"timeout_ms"`
-	Slave      uint8
 }

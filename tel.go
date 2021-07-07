@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"tel/config"
 	"tel/modbus"
 )
@@ -19,10 +18,13 @@ type Driver interface {
 }
 
 func main() {
+
+	log.SetFlags(log.Lmicroseconds | log.LUTC)
+
 	ctx, ctxx := context.WithCancel(context.Background())
 	err := run(ctx)
 	if err != nil {
-		log.Printf("err: %v", err)
+		log.Printf("%v", err)
 	} else {
 		log.Printf("exit without error?: %v", err)
 	}
@@ -33,7 +35,7 @@ func main() {
 func run(ctx context.Context) error {
 
 	cTagList := os.Getenv("CONFIG_TAGLIST")
-	cConfigDrivers := os.Getenv("CONFIG_DRIVERS")
+	cConfigDriver := os.Getenv("CONFIG_DRIVER")
 	cDriver := os.Getenv("DRIVER")
 	cOpc := os.Getenv("OPC")
 
@@ -41,43 +43,36 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("CONFIG_TAGLIST is not set")
 	}
 
-	if cDriver == "" {
-		return fmt.Errorf("DRIVER is not set")
+	if cConfigDriver == "" {
+		return fmt.Errorf("CONFIG_DRIVERS is not set")
 	}
 
-	if cConfigDrivers == "" {
-		return fmt.Errorf("CONFIG_DRIVERS is not set")
+	if cDriver == "" {
+		return fmt.Errorf("DRIVER is not set")
 	}
 
 	if cOpc == "" {
 		return fmt.Errorf("OPC is not set")
 	}
 
-	f, err := os.Open(filepath.Clean(cTagList))
+	configTags, err := config.LoadTagList(cTagList)
 	if err != nil {
-		return fmt.Errorf("failed to open %v: %w", cTagList, err)
-	}
-
-	f2, err := os.Open(filepath.Clean(cConfigDrivers))
-	if err != nil {
-		return fmt.Errorf("failed to open %v: %w", cTagList, err)
-	}
-
-	c, err := config.LoadConfig(f, f2)
-	e := f.Close()
-	e2 := f2.Close()
-	if e2 != nil && e != nil {
-		return fmt.Errorf("failed to close config file: %w", err)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load tags: %w", err)
 	}
 
 	var driver Driver
 
 	switch cDriver {
 	case "modbus":
-		d, err := modbus.NewModbus(c.Driver.Modbus, c.TagList, cOpc)
+
+		configModbus, err := config.LoadModbus(cConfigDriver)
+		if err != nil {
+			return fmt.Errorf("failed to load modbus configuration: %w", err)
+		}
+
+		log.Printf("starting modbus as: %+v", configModbus.Modbus.Device)
+
+		d, err := modbus.NewModbus(configTags.Tags, configModbus.Modbus, cOpc)
 		if err != nil {
 			return fmt.Errorf("failed to create modbus driver: %w", err)
 		}

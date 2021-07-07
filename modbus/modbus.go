@@ -5,8 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
 	"tel/config"
 	"tel/contrib/modbus"
 	"time"
@@ -16,57 +14,60 @@ import (
 )
 
 type Modbus struct {
-	c            config.DriverModbus
-	t            config.TagList
-	conn         modbus.Client
-	opc          *opcua.Client
-	buffer       registerTable
-	doubleBuffer registerTable
+	device config.ModbusDevice
+	tagmap []modbusMap
+	conn   modbus.Client
+	opc    *opcua.Client
+	buffer registerTable
+}
+
+type modbusMap struct {
+	Modbus config.ModbusTag
+	Tag    config.TagListTag
+	NodeID ua.NodeID
 }
 
 type registerTable struct {
-	coils     [65536]byte
-	discretes [65536]byte
+	coils     [65536]bool
+	discretes [65536]bool
 	input     [65536]uint16
 	holding   [65536]uint16
 }
 
-func NewModbus(c config.DriverModbus, t config.TagList, opc string) (*Modbus, error) {
+func NewModbus(tags []config.TagListTag, cfg config.ModbusDriver, opc string) (*Modbus, error) {
 
 	mb := Modbus{
-		c: c,
-		t: t,
+		device: cfg.Device,
 		buffer: registerTable{
-			coils:     [65536]byte{},
-			discretes: [65536]byte{},
+			coils:     [65536]bool{},
+			discretes: [65536]bool{},
 			input:     [65536]uint16{},
 			holding:   [65536]uint16{},
 		},
-		doubleBuffer: registerTable{
-			coils:     [65536]byte{},
-			discretes: [65536]byte{},
-			input:     [65536]uint16{},
-			holding:   [65536]uint16{},
-		},
+	}
+
+	err := mb.tagLoad(tags, cfg.Tags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tags: %w", err)
 	}
 
 	var handler modbus.ClientHandler
 
-	if c.TimeoutMs == 0 {
+	if mb.device.TimeoutMs == 0 {
 		return nil, fmt.Errorf("timeout cannot be 0")
 	}
-	if c.Slave == 0 {
+	if mb.device.Slave == 0 {
 		log.Printf("Slave has been provided as 0 (broadcast), this will likely fail")
 	}
 
-	switch c.Mode {
-	case ModeTCP:
-		tcphandler := modbus.NewTCPClientHandler(c.Target)
-		tcphandler.Timeout = time.Duration(c.TimeoutMs) * time.Millisecond
-		tcphandler.SlaveId = c.Slave
+	switch mb.device.Mode {
+	case string(config.ModbusModeTCP):
+		tcphandler := modbus.NewTCPClientHandler(mb.device.Target)
+		tcphandler.Timeout = time.Duration(mb.device.TimeoutMs) * time.Millisecond
+		tcphandler.SlaveId = mb.device.Slave
 		handler = tcphandler
 	default:
-		return nil, fmt.Errorf("modbus mode %v is not supported, options are [%v]", c.Mode, ModeTCP)
+		return nil, fmt.Errorf("modbus mode %v is not supported, options are [%v]", mb.device.Mode, config.ModbusModeTCP)
 	}
 
 	mb.conn = modbus.NewClient(handler)
@@ -81,64 +82,157 @@ func (m *Modbus) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	chopc := make(chan *opcua.PublishNotificationData)
-
-	sub, err := m.opc.Subscribe(&opcua.SubscriptionParameters{
-		Interval:                   100 * time.Millisecond,
-		Priority:                   0,
-		LifetimeCount:              10000,
-		MaxKeepAliveCount:          3000,
-		MaxNotificationsPerPublish: 10000,
-	}, chopc)
-
-	for i, v := range m.t.Tags {
-
-		handleID := uint32(i)
-
-		log.Printf("monitoring %+v", v)
-
-		nodeID, err := ua.ParseNodeID("ns=1;s=" + v.Name)
-		if err != nil {
-			return fmt.Errorf("failed to parse node ID: %w", err)
-		}
-
-		miCreateRequest := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, handleID)
-
-		res, err := sub.Monitor(ua.TimestampsToReturnBoth, miCreateRequest)
-		if err != nil || res.Results[0].StatusCode != ua.StatusOK {
-			return fmt.Errorf("failed to monitor %v: %v %v", nodeID, res.Results[0].StatusCode, err)
-		}
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to create opc subscription: %w", err)
-	}
-
-	go func() {
-		sub.Run(ctx)
-		panic("opc subscription returned unexpectedly") //todo, this is not optimal...
-	}()
-
-	err = m.eventLoop(ctx, chopc)
-	return fmt.Errorf("event loop exit: %w", err)
-}
-
-func (m *Modbus) eventLoop(ctx context.Context, opchan chan *opcua.PublishNotificationData) error {
-
 	ticker := time.NewTicker(10 * time.Millisecond)
-	ioread := time.NewTicker(time.Duration(m.c.ScantimeMs) * time.Millisecond)
+	ioread := time.NewTicker(time.Duration(m.device.ScantimeMs) * time.Millisecond)
 
 	for range ticker.C {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("eventLoop: context cancellation caught")
+			return fmt.Errorf("ctx caught")
 		case <-ioread.C:
+
+			err = m.opcread()
+			if err != nil {
+				log.Printf("opc read failed: %v", err)
+			}
+
+			err = m.iowrite()
+			if err != nil {
+				log.Printf("io write failed: %v", err)
+			}
+
 			err := m.ioread()
 			if err != nil {
-				return fmt.Errorf("failed to read io: %w", err)
+				log.Printf("io read file: %v", err)
 			}
-		case o := <-opchan:
-			log.Printf("opc sub: %+v", o)
+
+			err = m.opcwrite()
+			if err != nil {
+				log.Printf("opc write failed: %v", err)
+			}
+
+		}
+	}
+	return fmt.Errorf("unexpected exit")
+}
+func (m *Modbus) tagLoad(tags []config.TagListTag, mtags []config.ModbusTag) error {
+
+	for _, v := range mtags {
+
+		tag := config.TagListTag{}
+
+		for _, x := range tags {
+			if v.Name == x.Name {
+				tag = x
+			}
+		}
+
+		if tag.Name == "" {
+			return fmt.Errorf("modbus tag %v was not found in global tag list", v)
+		}
+
+		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
+		if err != nil {
+			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
+		}
+
+		record := modbusMap{
+			Modbus: v,
+			Tag:    tag,
+			NodeID: *nodeid,
+		}
+
+		m.tagmap = append(m.tagmap, record)
+	}
+
+	return nil
+}
+
+func (m *Modbus) opcread() error {
+
+	for _, v := range m.tagmap {
+
+		req := &ua.ReadRequest{
+			MaxAge:             0,
+			NodesToRead:        []*ua.ReadValueID{{NodeID: &v.NodeID}},
+			TimestampsToReturn: ua.TimestampsToReturnBoth,
+		}
+
+		resp, err := m.opc.Read(req)
+		if err != nil {
+			return fmt.Errorf("failed to read %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
+		}
+		if len(resp.Results) < 1 {
+			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
+		}
+		if resp.Results[0].Status != ua.StatusOK {
+			return fmt.Errorf("read failed for for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Status)
+		}
+
+		variant := resp.Results[0].Value
+
+		switch v.Modbus.Type {
+		case config.ModbusCoil:
+			m.buffer.coils[v.Modbus.Index] = variant.Bool()
+		case config.ModbusDiscrete:
+			continue
+		case config.ModbusHolding:
+			m.buffer.holding[v.Modbus.Index] = uint16(variant.Uint())
+		case config.ModbusInput:
+			continue
+		}
+
+	}
+
+	return nil
+}
+func (m *Modbus) opcwrite() error {
+
+	for _, v := range m.tagmap {
+
+		var variant ua.Variant
+
+		switch v.Modbus.Type {
+		case config.ModbusCoil:
+			continue
+		case config.ModbusDiscrete:
+			pvariant, err := ua.NewVariant(m.buffer.discretes[v.Modbus.Index])
+			if err != nil {
+				return fmt.Errorf("failed to encode value for %+v", v.Tag.Name)
+			}
+			variant = *pvariant
+		case config.ModbusHolding:
+			continue
+		case config.ModbusInput:
+			pvariant, err := ua.NewVariant(m.buffer.input[v.Modbus.Index])
+			if err != nil {
+				return fmt.Errorf("failed to encode value for %+v", v.Tag.Name)
+			}
+			variant = *pvariant
+		}
+
+		req := &ua.WriteRequest{
+			NodesToWrite: []*ua.WriteValue{
+				{
+					NodeID:      &v.NodeID,
+					AttributeID: ua.AttributeIDValue,
+					Value: &ua.DataValue{
+						EncodingMask: ua.DataValueValue,
+						Value:        &variant,
+					},
+				},
+			},
+		}
+
+		resp, err := m.opc.Write(req)
+		if err != nil {
+			return fmt.Errorf("write failed for %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
+		}
+		if len(resp.Results) < 1 {
+			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
+		}
+		if resp.Results[0].Error() != ua.StatusOK.Error() {
+			return fmt.Errorf("write failed for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Error())
 		}
 	}
 
@@ -146,78 +240,63 @@ func (m *Modbus) eventLoop(ctx context.Context, opchan chan *opcua.PublishNotifi
 }
 
 func (m *Modbus) ioread() error {
-	for _, v := range m.t.Tags {
-		id := strings.Split(v.Index, ".")
-		if len(id) != 2 {
-			return fmt.Errorf("index for %v could not be parsed: len[:] == %v", v, len(id))
-		}
 
-		objectType := id[0]
-		pindex, err := strconv.ParseUint(id[1], 10, 16)
-		if err != nil {
-			return fmt.Errorf("index for %v could not be parsed: %w", v, err)
-		}
+	for _, v := range m.tagmap {
 
-		if pindex > 65535 {
-			return fmt.Errorf("index exceeds 65535, will not process: %v", pindex)
-		}
-		index := uint16(pindex)
-
-		switch strings.ToLower(objectType) {
-		case "c":
-			result, err := m.conn.ReadCoils(index, 1)
-			if err != nil {
-				return fmt.Errorf("failed to read coil: %w", err)
-			}
-			m.buffer.coils[index] = result[0]
-		case "d":
+		index := v.Modbus.Index
+		switch v.Modbus.Type {
+		case config.ModbusCoil:
+			continue
+		case config.ModbusDiscrete:
 			result, err := m.conn.ReadDiscreteInputs(index, 1)
 			if err != nil {
-				return fmt.Errorf("failed to read discrete: %w", err)
+				return fmt.Errorf("failed to read discrete %v: %w", index, err)
 			}
-			m.buffer.discretes[index] = result[0]
-		case "i":
+			if result[0] == 0x0000 {
+				m.buffer.discretes[index] = false
+			} else {
+				m.buffer.discretes[index] = true
+			}
+		case config.ModbusHolding:
+			continue
+		case config.ModbusInput:
 			result, err := m.conn.ReadInputRegisters(index, 1)
 			if err != nil {
-				return fmt.Errorf("failed to read input reg: %w", err)
+				return fmt.Errorf("failed to read input reg %v: %w", index, err)
 			}
 			m.buffer.input[index] = binary.BigEndian.Uint16(result)
-		case "h":
-			result, err := m.conn.ReadHoldingRegisters(index, 1)
-			if err != nil {
-				return fmt.Errorf("failed to read discrete: %w", err)
-			}
-			m.buffer.holding[index] = binary.BigEndian.Uint16(result)
 		}
-
-		// compare buffers
-		for k := range m.buffer.coils {
-			if m.doubleBuffer.coils[k] != m.buffer.coils[k] {
-				log.Printf("CHANGE: coil %v = %v", k, m.buffer.coils[k])
-			}
-		}
-
-		for k := range m.buffer.discretes {
-			if m.doubleBuffer.discretes[k] != m.buffer.discretes[k] {
-				log.Printf("CHANGE: discrete %v = %v", k, m.buffer.discretes[k])
-			}
-		}
-
-		for k := range m.buffer.input {
-			if m.doubleBuffer.input[k] != m.buffer.input[k] {
-				log.Printf("CHANGE: input %v = %v", k, m.buffer.input[k])
-			}
-		}
-
-		for k := range m.buffer.holding {
-			if m.doubleBuffer.holding[k] != m.buffer.holding[k] {
-				log.Printf("CHANGE: holding %v = %v", k, m.buffer.holding[k])
-			}
-		}
-
-		//swap buffers
-		m.doubleBuffer = m.buffer
 	}
+	return nil
+}
 
+func (m *Modbus) iowrite() error {
+
+	for _, v := range m.tagmap {
+
+		index := v.Modbus.Index
+		switch v.Modbus.Type {
+		case config.ModbusCoil:
+			var i uint16
+			if m.buffer.coils[index] {
+				i = 0xFF00
+			} else {
+				i = 0x0000
+			}
+			_, err := m.conn.WriteSingleCoil(index, i)
+			if err != nil {
+				return fmt.Errorf("failed to write coil %v: %w", index, err)
+			}
+		case config.ModbusDiscrete:
+			continue
+		case config.ModbusHolding:
+			_, err := m.conn.WriteSingleRegister(index, m.buffer.holding[index])
+			if err != nil {
+				return fmt.Errorf("failed to write holding register %v: %w", index, err)
+			}
+		case config.ModbusInput:
+			continue
+		}
+	}
 	return nil
 }

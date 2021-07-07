@@ -8,42 +8,48 @@ meta:
 tags:
   - name: VALVE_OPEN
     namespace: TAGS
-    description: bool valve
-    type: bool
-    default_value: 1
-    index: C.0
-
-  - name: VALVE_CLOSED
-    namespace: TAGS
-    description: bool valve
+    description: Valve Open
     type: bool
     default_value: 0
-    index: D.0
 
-  - name: FLOW_A
+  - name: VALVE_CLOSE
     namespace: TAGS
-    description: uint16 flow
-    type: int16
-    default_value: -325
-    index: I.0
+    description: Valve Close
+    type: bool
+    default_value: 0
 
-  - name: FLOW_B
+  - name: VALVE_LIMIT_A
     namespace: TAGS
-    description: uint16 flow
+    description: Value Limit Switch A
+    type: bool
+    default_value: 0
+
+  - name: VALVE_LIMIT_B
+    namespace: TAGS
+    description: Value Limit Switch B
+    type: bool
+    default_value: 0
+
+  - name: VALVE_FLOW_A
+    namespace: TAGS
+    description: Valve Flow A
     type: uint16
-    default_value: 325
-    index: I.0
+    default_value: 0
 
-  - name: FLOW_C
+  - name: VALVE_FLOW_B
     namespace: TAGS
-    description: uint16 flow
-    type: int16
-    default_value: -325
-    index: H.0
-
-  - name: FLOW_D
-    namespace: TAGS
-    description: uint16 flow
+    description: Valve Flow B
     type: uint16
-    default_value: 325
-    index: H.0
+    default_value: 0
+
+  - name: VALVE_FLOW_C
+    namespace: TAGS
+    description: Valve Flow C
+    type: uint16
+    default_value: 0
+
+  - name: VALVE_PROPORTIONAL
+    namespace: TAGS
+    description: Valve Proportional
+    type: uint16
+    default_value: 0

@@ -7,25 +7,55 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
 
-func LoadConfig(taglist *os.File, driver *os.File) (Config, error) {
+func LoadTagList(path string) (TagList, error) {
 
-	c := Config{}
+	c := TagList{}
 
-	y := yaml.NewDecoder(taglist)
-	err := y.Decode(&c.TagList)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to load taglist: %w", err)
+		return TagList{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	y := yaml.NewDecoder(f)
+	y.SetStrict(true)
+	err = y.Decode(&c)
+	if err != nil {
+		return TagList{}, fmt.Errorf("failed to load taglist: %w", err)
+	}
+	return c, nil
+}
+
+func LoadModbus(path string) (Modbus, error) {
+
+	c := Modbus{}
+
+	f, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return Modbus{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	y := yaml.NewDecoder(f)
+	y.SetStrict(true)
+
+	err = y.Decode(&c)
+	if err != nil {
+		return Modbus{}, fmt.Errorf("failed to load modbus: %w", err)
 	}
 
-	y = yaml.NewDecoder(driver)
-	err = y.Decode(&c.Driver)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to load driver: %w", err)
+	for _, v := range c.Modbus.Tags {
+		switch v.Type {
+		case ModbusCoil, ModbusDiscrete, ModbusHolding, ModbusInput:
+			continue
+		default:
+			return Modbus{}, fmt.Errorf("invalid type, expected one of [%v, %v, %v, %v] for: %+v", ModbusCoil, ModbusDiscrete, ModbusHolding, ModbusInput, v)
+		}
 	}
-
 	return c, nil
 }

@@ -11,9 +11,9 @@
             "program": "${workspaceFolder}",
             "env": {
                 "CONFIG_TAGLIST": "${workspaceFolder}/config/taglist.yml",
-                "CONFIG_DRIVERS": "${workspaceFolder}/config/driver.yml",
+                "CONFIG_DRIVER": "${workspaceFolder}/config/modbus.yml",
                 "OPC": "opc.tcp://localhost:4840",
-                "DRIVER": "modbus"
+                "DRIVER": "modbus",
             }
         }
     ]

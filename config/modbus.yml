@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2021 Kaelan Thijs Fouwels <kaelan.thijs@fouwels.com>
+#
+# SPDX-License-Identifier: MIT
+meta:
+  site: example
+  comment: example modbus device
+modbus:
+  device:
+    label: wago_1
+    mode: tcp
+    target: localhost:5002
+    scantime_ms: 100
+    timeout_ms: 1000
+    slave_id: 1
+  tags:
+    - name: VALVE_OPEN
+      type: coil
+      index: 0
+    - name: VALVE_CLOSE
+      type: coil
+      index: 1
+    - name: VALVE_LIMIT_A
+      type: discrete
+      index: 0
+    - name: VALVE_LIMIT_B
+      type: discrete
+      index: 1
+    - name: VALVE_FLOW_A
+      type: input
+      index: 0
+    - name: VALVE_FLOW_B
+      type: input
+      index: 1
+    - name: VALVE_FLOW_C
+      type: input
+      index: 2
+    - name: VALVE_PROPORTIONAL
+      type: holding
+      index: 0

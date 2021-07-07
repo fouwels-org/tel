@@ -6,30 +6,27 @@ package config
 
 import (
 	"log"
-	"os"
 	"testing"
 )
 
 func TestLoadConfig(t *testing.T) {
 
-	f, err := os.Open("taglist.yml")
-	if err != nil {
-		t.Fatalf("failed to open: %v", err)
-	}
-	defer f.Close()
-
-	f2, err := os.Open("driver.yml")
-	if err != nil {
-		t.Fatalf("failed to open: %v", err)
-	}
-	defer f.Close()
-
-	config, err := LoadConfig(f, f2)
+	tags, err := LoadTagList("taglist.yml")
 	if err != nil {
 		t.Fatalf("failed to load: %v", err)
 	}
 
-	for _, v := range config.TagList.Tags {
-		log.Printf("%+v", v)
+	mods, err := LoadModbus("modbus.yml")
+	if err != nil {
+		t.Fatalf("failed to load: %v", err)
 	}
+
+	for _, v := range tags.Tags {
+		log.Printf("tags: %+v", v)
+	}
+
+	for _, v := range mods.Modbus.Tags {
+		log.Printf("modbus: %+v", v)
+	}
+
 }

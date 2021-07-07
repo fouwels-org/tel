@@ -93,22 +93,22 @@ func (m *Modbus) Run(ctx context.Context) error {
 
 			err = m.opcread()
 			if err != nil {
-				log.Printf("opc read failed: %v", err)
+				return fmt.Errorf("opc read failed: %v", err)
 			}
 
 			err = m.iowrite()
 			if err != nil {
-				log.Printf("io write failed: %v", err)
+				return fmt.Errorf("io write failed: %v", err)
 			}
 
 			err := m.ioread()
 			if err != nil {
-				log.Printf("io read file: %v", err)
+				return fmt.Errorf("io read file: %v", err)
 			}
 
 			err = m.opcwrite()
 			if err != nil {
-				log.Printf("opc write failed: %v", err)
+				return fmt.Errorf("opc write failed: %v", err)
 			}
 
 		}

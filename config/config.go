@@ -59,3 +59,24 @@ func LoadModbus(path string) (Modbus, error) {
 	}
 	return c, nil
 }
+
+func LoadMqtt(path string) (MQTT, error) {
+
+	c := MQTT{}
+
+	f, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return MQTT{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	y := yaml.NewDecoder(f)
+	y.SetStrict(true)
+
+	err = y.Decode(&c)
+	if err != nil {
+		return MQTT{}, fmt.Errorf("failed to load mqtt: %w", err)
+	}
+
+	return c, nil
+}

@@ -33,6 +33,12 @@ type mqttMap struct {
 	NodeID ua.NodeID
 }
 
+type mqttMessage struct {
+	Timestamp time.Time
+	Tag       string
+	Value     string
+}
+
 func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT, error) {
 
 	mb := MQTT{
@@ -106,6 +112,8 @@ func (m *MQTT) Run(ctx context.Context) error {
 
 	ticker := time.NewTicker(10 * time.Millisecond)
 
+	publisher := time.NewTicker(100 * time.Millisecond)
+
 	for range ticker.C {
 		select {
 		case e := <-mqerr:
@@ -113,7 +121,11 @@ func (m *MQTT) Run(ctx context.Context) error {
 
 		case <-ctx.Done():
 			return fmt.Errorf("ctx caught")
-
+		case <-publisher.C:
+			err := m.iotick()
+			if err != nil {
+				return fmt.Errorf("tick error: %w", err)
+			}
 		}
 	}
 	return fmt.Errorf("unexpected exit")
@@ -151,8 +163,7 @@ func (m *MQTT) tagLoad(tags []config.TagListTag, mtags []config.MQTTTag) error {
 	return nil
 }
 
-func (m *MQTT) opcread() error {
-
+func (m *MQTT) iotick() error {
 	for _, v := range m.tagmap {
 
 		req := &ua.ReadRequest{
@@ -173,31 +184,30 @@ func (m *MQTT) opcread() error {
 		}
 
 		variant := resp.Results[0].Value
+		tp := variant.Type()
+		var value interface{}
 
-		log.Printf("read %v: %v", v, variant.String())
+		switch tp {
+		case ua.TypeIDBoolean:
+			value = variant.Bool()
+		case ua.TypeIDInt16, ua.TypeIDInt32, ua.TypeIDInt64:
+			value = variant.Int()
+		case ua.TypeIDUint16, ua.TypeIDUint32, ua.TypeIDUint64:
+			value = variant.Uint()
+		case ua.TypeIDFloat, ua.TypeIDDouble:
+			value = variant.Float()
+		default:
+			return fmt.Errorf("unknown type for tag %v: %v", v.NodeID, variant)
+		}
+
+		p := mqttMessage{
+			Timestamp: time.Now(),
+			Tag:       v.Tag.Name,
+			Value:     fmt.Sprintf("%v", value),
+		}
+
+		m.mqc.Publish(v.Mqtt.Topic, 0x10, true, p)
 	}
 
 	return nil
-}
-func (m *MQTT) opcwrite() error {
-
-	// for _, v := range m.tagmap {
-
-	// 	var variant ua.Variant
-
-	// 	resp, err := m.opc.Write(req)
-	// 	if err != nil {
-	// 		return fmt.Errorf("write failed for %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
-	// 	}
-	// 	if len(resp.Results) < 1 {
-	// 		return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
-	// 	}
-	// 	if resp.Results[0].Error() != ua.StatusOK.Error() {
-	// 		return fmt.Errorf("write failed for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Error())
-	// 	}
-	// }
-
-	// return nil
-
-	return fmt.Errorf("not implemented")
 }

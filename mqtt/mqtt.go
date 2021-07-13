@@ -7,6 +7,7 @@ package mqtt
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -164,7 +165,16 @@ func (m *MQTT) tagLoad(tags []config.TagListTag, mtags []config.MQTTTag) error {
 }
 
 func (m *MQTT) iotick() error {
+
+	ioerr := make(chan error)
+
 	for _, v := range m.tagmap {
+
+		select {
+		case e := <-ioerr:
+			return fmt.Errorf("io error: %w", e)
+		default:
+		}
 
 		req := &ua.ReadRequest{
 			MaxAge:             0,
@@ -206,7 +216,24 @@ func (m *MQTT) iotick() error {
 			Value:     fmt.Sprintf("%v", value),
 		}
 
-		m.mqc.Publish(v.Mqtt.Topic, 0x10, true, p)
+		j, err := json.Marshal(p)
+		if err != nil {
+			return fmt.Errorf("failed to marshel: %v", err)
+		}
+		js := string(j)
+
+		log.Printf("publishing to %v: %v", v.Mqtt.Topic+"/"+v.Mqtt.Name, js)
+
+		token := m.mqc.Publish(v.Mqtt.Topic+"/"+v.Mqtt.Name, 0x10, true, js)
+
+		go func() {
+			token.Wait()
+			err = token.Error()
+			if err != nil {
+				ioerr <- err
+			}
+		}()
+
 	}
 
 	return nil

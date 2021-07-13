@@ -15,18 +15,18 @@ mqtt:
     keepalive_ms: 1000
   tags:
     - name: VALVE_OPEN
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_CLOSE
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_LIMIT_A
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_LIMIT_B
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_FLOW_A
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_FLOW_B
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_FLOW_C
-      topic: /scada/tags
+      topic: scada/tags
     - name: VALVE_PROPORTIONAL
-      topic: /scada/tags
+      topic: scada/tags

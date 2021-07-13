@@ -61,11 +61,7 @@ func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url %v: %w", mqaddr, err)
 	}
-
-	t := tls.Config{ // use host root CAs
-	}
-
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond}, "tcp", mqaddr.Host, &t)
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond}, "tcp", mqaddr.Host, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed test dial to %v: %w", mqaddr, err)
 	}
@@ -82,7 +78,6 @@ func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT
 		ClientID:             cfg.Device.ClientID,
 		Username:             cfg.Device.Username,
 		Password:             cfg.Device.Token,
-		TLSConfig:            &t,
 	}
 
 	mqc := pahmqtt.NewClient(&mqconfig)
@@ -222,9 +217,9 @@ func (m *MQTT) iotick() error {
 		}
 		js := string(j)
 
-		log.Printf("publishing to %v: %v", v.Mqtt.Topic+"/"+v.Mqtt.Name, js)
+		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
 
-		token := m.mqc.Publish(v.Mqtt.Topic+"/"+v.Mqtt.Name, 0x10, true, js)
+		token := m.mqc.Publish(v.Mqtt.Topic, 0x10, true, js)
 
 		go func() {
 			token.Wait()

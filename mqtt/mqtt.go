@@ -31,9 +31,9 @@ type mqttMap struct {
 }
 
 type mqttMessage struct {
-	Timestamp time.Time
-	Tag       string
-	Value     interface{}
+	Timestamp time.Time `json:"timestamp"`
+	Tag       string    `json:"tag"`
+	Value     string    `json:"value"`
 }
 
 func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT, error) {
@@ -76,7 +76,7 @@ func (m *MQTT) Run(ctx context.Context) error {
 
 	ticker := time.NewTicker(10 * time.Millisecond)
 
-	publisher := time.NewTicker(100 * time.Millisecond)
+	publisher := time.NewTicker(time.Duration(m.device.ScantimeMs) * time.Millisecond)
 
 	for range ticker.C {
 		select {
@@ -179,16 +179,15 @@ func (m *MQTT) iotick() error {
 		p := mqttMessage{
 			Timestamp: time.Now(),
 			Tag:       v.Tag.Name,
-			Value:     value,
+			Value:     strval,
 		}
 
 		j, err := json.Marshal(p)
 		if err != nil {
 			return fmt.Errorf("failed to marshal: %v", err)
 		}
-		js := string(j)
 
-		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, js)
+		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, j)
 
 		tout := token.WaitTimeout(time.Second * 1)
 		if !tout {

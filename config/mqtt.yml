@@ -11,8 +11,8 @@ mqtt:
     client_id: telemetry_site
     username: service
     token: 5069-ceb6-d88c-9e52-45c4-fb0c
-    timeout_ms: 1000
-    keepalive_ms: 1000
+    scantime_ms: 500
+    keepalive_ms: 5000
   tags:
     - name: VALVE_OPEN
       topic: scada/tags

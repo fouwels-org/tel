@@ -21,6 +21,7 @@ type MQTTDevice struct {
 	Username    string
 	Token       string
 	KeepaliveMs int `yaml:"keepalive_ms"`
+	ScantimeMs  int `yaml:"scantime_ms"`
 }
 
 type MQTTTag struct {

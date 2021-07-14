@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"tel/config"
 	"time"
 
@@ -188,8 +187,6 @@ func (m *MQTT) iotick() error {
 			return fmt.Errorf("failed to marshal: %v", err)
 		}
 		js := string(j)
-
-		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
 
 		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, js)
 

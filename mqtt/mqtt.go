@@ -73,13 +73,13 @@ func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT
 		Servers: []*url.URL{
 			mqaddr,
 		},
-		KeepAlive:            int64(cfg.Device.KeepaliveMs * 1000),
-		ConnectTimeout:       time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
-		MaxReconnectInterval: 1,
-		AutoReconnect:        true,
-		ClientID:             cfg.Device.ClientID,
-		Username:             cfg.Device.Username,
-		Password:             cfg.Device.Token,
+		KeepAlive:      int64(cfg.Device.KeepaliveMs * 1000),
+		ConnectTimeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
+		PingTimeout:    time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
+		AutoReconnect:  false,
+		ClientID:       cfg.Device.ClientID,
+		Username:       cfg.Device.Username,
+		Password:       cfg.Device.Token,
 	}
 
 	mqc := pahmqtt.NewClient(&mqconfig)
@@ -224,16 +224,18 @@ func (m *MQTT) iotick() error {
 		}
 		js := string(j)
 
-		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
-
-		if !m.mqc.IsConnectionOpen() {
-			log.Printf("connection not open, reconnecting")
+		if !m.mqc.IsConnected() || !m.mqc.IsConnectionOpen() {
+			log.Printf("connection lost, reconnecting")
 			t := m.mqc.Connect()
 			t.Done()
-			if t.Error() != nil {
-				return fmt.Errorf("failed to reconnect: %w", t.Error())
+			err := t.Error()
+			if err != nil {
+				return fmt.Errorf("failed to connect: %w", err)
 			}
+
 		}
+
+		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
 
 		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, js)
 

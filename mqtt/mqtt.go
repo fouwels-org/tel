@@ -76,7 +76,7 @@ func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT
 		KeepAlive:      int64(cfg.Device.KeepaliveMs * 1000),
 		ConnectTimeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
 		PingTimeout:    time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
-		AutoReconnect:  false,
+		AutoReconnect:  true,
 		ClientID:       cfg.Device.ClientID,
 		Username:       cfg.Device.Username,
 		Password:       cfg.Device.Token,
@@ -223,17 +223,6 @@ func (m *MQTT) iotick() error {
 			return fmt.Errorf("failed to marshal: %v", err)
 		}
 		js := string(j)
-
-		if !m.mqc.IsConnected() || !m.mqc.IsConnectionOpen() {
-			log.Printf("connection lost, reconnecting")
-			t := m.mqc.Connect()
-			t.Done()
-			err := t.Error()
-			if err != nil {
-				return fmt.Errorf("failed to connect: %w", err)
-			}
-
-		}
 
 		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
 

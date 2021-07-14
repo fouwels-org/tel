@@ -26,6 +26,7 @@ type MQTT struct {
 	tagmap []mqttMap
 	opc    *opcua.Client
 	mqc    pahmqtt.Client
+	buffer map[string]string
 }
 
 type mqttMap struct {
@@ -37,13 +38,14 @@ type mqttMap struct {
 type mqttMessage struct {
 	Timestamp time.Time
 	Tag       string
-	Value     string
+	Value     interface{}
 }
 
 func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT, error) {
 
 	mb := MQTT{
 		device: cfg.Device,
+		buffer: map[string]string{},
 	}
 
 	ml := log.New(os.Stdout, "[paho] ", log.Lmicroseconds|log.LUTC|log.Lmsgprefix)
@@ -205,10 +207,24 @@ func (m *MQTT) iotick() error {
 			return fmt.Errorf("unknown type for tag %v: %v", v.NodeID, variant)
 		}
 
+		strval := fmt.Sprintf("%v", value)
+		id := v.NodeID.String()
+		_, ok := m.buffer[id]
+		if !ok {
+			m.buffer[id] = strval
+		}
+
+		// if no change, skip
+		if ok && m.buffer[id] == strval {
+			continue
+		}
+
+		m.buffer[id] = strval
+
 		p := mqttMessage{
 			Timestamp: time.Now(),
 			Tag:       v.Tag.Name,
-			Value:     fmt.Sprintf("%v", value),
+			Value:     value,
 		}
 
 		j, err := json.Marshal(p)

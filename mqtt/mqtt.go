@@ -116,7 +116,6 @@ func (m *MQTT) Run(ctx context.Context) error {
 		select {
 		case e := <-mqerr:
 			return fmt.Errorf("mqtt error: %w", e)
-
 		case <-ctx.Done():
 			return fmt.Errorf("ctx caught")
 		case <-publisher.C:
@@ -163,15 +162,7 @@ func (m *MQTT) tagLoad(tags []config.TagListTag, mtags []config.MQTTTag) error {
 
 func (m *MQTT) iotick() error {
 
-	ioerr := make(chan error)
-
 	for _, v := range m.tagmap {
-
-		select {
-		case e := <-ioerr:
-			return fmt.Errorf("io error: %w", e)
-		default:
-		}
 
 		req := &ua.ReadRequest{
 			MaxAge:             0,
@@ -229,22 +220,31 @@ func (m *MQTT) iotick() error {
 
 		j, err := json.Marshal(p)
 		if err != nil {
-			return fmt.Errorf("failed to marshel: %v", err)
+			return fmt.Errorf("failed to marshal: %v", err)
 		}
 		js := string(j)
 
 		log.Printf("publishing to %v: %v", v.Mqtt.Topic, js)
 
-		token := m.mqc.Publish(v.Mqtt.Topic, 0x10, true, js)
-
-		go func() {
-			token.Wait()
-			err = token.Error()
-			if err != nil {
-				ioerr <- err
+		if !m.mqc.IsConnectionOpen() {
+			log.Printf("connection not open, reconnecting")
+			t := m.mqc.Connect()
+			t.Done()
+			if t.Error() != nil {
+				return fmt.Errorf("failed to reconnect: %w", t.Error())
 			}
-		}()
+		}
 
+		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, js)
+
+		tout := token.WaitTimeout(time.Second * 1)
+		if !tout {
+			return fmt.Errorf("timed out")
+		}
+		err = token.Error()
+		if err != nil {
+			return fmt.Errorf("failed to publish: %w", err)
+		}
 	}
 
 	return nil

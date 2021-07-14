@@ -20,7 +20,6 @@ type MQTTDevice struct {
 	ClientID    string `yaml:"client_id"`
 	Username    string
 	Token       string
-	TimeoutMs   int `yaml:"timeout_ms"`
 	KeepaliveMs int `yaml:"keepalive_ms"`
 }
 

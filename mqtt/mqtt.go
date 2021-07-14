@@ -6,13 +6,9 @@ package mqtt
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"net/url"
-	"os"
 	"tel/config"
 	"time"
 
@@ -48,41 +44,19 @@ func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT
 		buffer: map[string]string{},
 	}
 
-	ml := log.New(os.Stdout, "[paho] ", log.Lmicroseconds|log.LUTC|log.Lmsgprefix)
-
-	pahmqtt.ERROR = ml
-	pahmqtt.CRITICAL = ml
-	pahmqtt.WARN = ml
-
 	err := mb.tagLoad(tags, cfg.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	mqaddr, err := url.Parse(cfg.Device.Target)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse url %v: %w", mqaddr, err)
-	}
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond}, "tcp", mqaddr.Host, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed test dial to %v: %w", mqaddr, err)
-	}
-	_ = conn.Close()
+	mqconfig := pahmqtt.NewClientOptions()
+	mqconfig.AddBroker(cfg.Device.Target)
+	mqconfig.SetClientID(cfg.Device.ClientID)
+	mqconfig.SetUsername(cfg.Device.Username)
+	mqconfig.SetPassword(cfg.Device.Token)
+	mqconfig.SetKeepAlive(time.Duration(cfg.Device.KeepaliveMs) * time.Millisecond)
 
-	mqconfig := pahmqtt.ClientOptions{
-		Servers: []*url.URL{
-			mqaddr,
-		},
-		KeepAlive:      int64(cfg.Device.KeepaliveMs * 1000),
-		ConnectTimeout: time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
-		PingTimeout:    time.Duration(cfg.Device.TimeoutMs) * time.Millisecond,
-		AutoReconnect:  true,
-		ClientID:       cfg.Device.ClientID,
-		Username:       cfg.Device.Username,
-		Password:       cfg.Device.Token,
-	}
-
-	mqc := pahmqtt.NewClient(&mqconfig)
+	mqc := pahmqtt.NewClient(mqconfig)
 
 	mb.mqc = mqc
 	mb.opc = opcua.NewClient(opc)
@@ -96,17 +70,10 @@ func (m *MQTT) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	mqerr := make(chan error)
 	token := m.mqc.Connect()
-
-	go func(e chan error) {
-		token.Wait()
-		err := token.Error()
-		if err != nil {
-			e <- err
-		}
-
-	}(mqerr)
+	if token.Wait() && token.Error() != nil {
+		return fmt.Errorf("failed to connect: %w", token.Error())
+	}
 
 	ticker := time.NewTicker(10 * time.Millisecond)
 
@@ -114,8 +81,6 @@ func (m *MQTT) Run(ctx context.Context) error {
 
 	for range ticker.C {
 		select {
-		case e := <-mqerr:
-			return fmt.Errorf("mqtt error: %w", e)
 		case <-ctx.Done():
 			return fmt.Errorf("ctx caught")
 		case <-publisher.C:

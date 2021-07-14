@@ -25,7 +25,7 @@
             "env": {
                 "CONFIG_TAGLIST": "${workspaceFolder}/config/taglist.yml",
                 "CONFIG_DRIVER": "${workspaceFolder}/config/mqtt.yml",
-                "OPC": "opc.tcp://localhost:4840",
+                "OPC": "opc.tcp://10.200.4.204:4840",
                 "DRIVER": "mqtt",
             }
         }

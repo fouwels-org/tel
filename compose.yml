@@ -3,17 +3,16 @@
 # SPDX-License-Identifier: MIT
 
 services:
-  opc:
+  mqtt:
     image: registry2.lagoni.co.uk/lagoni-engineering/tel:dev
     build:
       dockerfile: Dockerfile
       context: "./"
     environment: 
-        CONFIG_TAGLIST": config/taglist.yml
-        CONFIG_DRIVER": config/modbus.yml
-        OPC": opc.tcp://localhost:4840
-        DRIVER": modbus
+        CONFIG_TAGLIST: config/taglist.yml
+        CONFIG_DRIVER: config/mqtt.yml
+        OPC: opc.tcp://localhost:4840
+        DRIVER: mqtt
+    network_mode: host
     volumes: 
-      - ./config/taglist.yml:/config/taglist.yml:ro
-    ports:
-      - 4840:4840
+      - ./config:/config:ro

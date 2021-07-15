@@ -11,6 +11,7 @@ import (
 	"os"
 	"tel/config"
 	"tel/modbus"
+	"tel/mqtt"
 )
 
 type Driver interface {
@@ -75,6 +76,21 @@ func run(ctx context.Context) error {
 		d, err := modbus.NewModbus(configTags.Tags, configModbus.Modbus, cOpc)
 		if err != nil {
 			return fmt.Errorf("failed to create modbus driver: %w", err)
+		}
+		driver = d
+
+	case "mqtt":
+
+		configMqtt, err := config.LoadMqtt(cConfigDriver)
+		if err != nil {
+			return fmt.Errorf("failed to load mqtt configuration: %w", err)
+		}
+
+		log.Printf("starting mqtt as: %+v", configMqtt.Mqtt.Device.Target)
+
+		d, err := mqtt.NewMQTT(configTags.Tags, configMqtt.Mqtt, cOpc)
+		if err != nil {
+			return fmt.Errorf("failed to create mqtt driver: %w", err)
 		}
 		driver = d
 	default:

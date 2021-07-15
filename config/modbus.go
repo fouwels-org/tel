@@ -20,7 +20,7 @@ const (
 )
 
 type Modbus struct {
-	Meta   TagListMeta
+	Meta   ConfigMeta
 	Modbus ModbusDriver
 }
 

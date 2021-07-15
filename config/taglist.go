@@ -5,13 +5,8 @@
 package config
 
 type TagList struct {
-	Meta TagListMeta
+	Meta ConfigMeta
 	Tags []TagListTag
-}
-
-type TagListMeta struct {
-	Site    string
-	Comment string
 }
 
 type TagListTag struct {

@@ -6,6 +6,8 @@ module tel
 go 1.16
 
 require (
+	github.com/eclipse/paho.golang v0.9.0 // indirect
+	github.com/eclipse/paho.mqtt.golang v1.3.5 // indirect
 	github.com/gopcua/opcua v0.1.13 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0

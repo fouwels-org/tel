@@ -31,9 +31,10 @@ type mqttMap struct {
 }
 
 type mqttMessage struct {
-	Timestamp time.Time `json:"timestamp"`
-	Tag       string    `json:"tag"`
-	Value     string    `json:"value"`
+	Timestamp   time.Time `json:"timestamp"`
+	Tag         string    `json:"tag"`
+	StringValue string    `json:"string_value"`
+	FloatValue  float64   `json:"float_value"`
 }
 
 func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT, error) {
@@ -149,15 +150,26 @@ func (m *MQTT) iotick() error {
 		tp := variant.Type()
 		var value interface{}
 
+		fval := 0.0
+
 		switch tp {
 		case ua.TypeIDBoolean:
 			value = variant.Bool()
+			b := variant.Bool()
+			if !b {
+				fval = float64(0)
+			} else {
+				fval = float64(1)
+			}
 		case ua.TypeIDInt16, ua.TypeIDInt32, ua.TypeIDInt64:
 			value = variant.Int()
+			fval = float64(variant.Int())
 		case ua.TypeIDUint16, ua.TypeIDUint32, ua.TypeIDUint64:
 			value = variant.Uint()
+			fval = float64(variant.Uint())
 		case ua.TypeIDFloat, ua.TypeIDDouble:
 			value = variant.Float()
+			fval = float64(variant.Float())
 		default:
 			return fmt.Errorf("unknown type for tag %v: %v", v.NodeID, variant)
 		}
@@ -177,9 +189,10 @@ func (m *MQTT) iotick() error {
 		m.buffer[id] = strval
 
 		p := mqttMessage{
-			Timestamp: time.Now(),
-			Tag:       v.Tag.Name,
-			Value:     strval,
+			Timestamp:   time.Now(),
+			Tag:         v.Tag.Name,
+			StringValue: strval,
+			FloatValue:  fval,
 		}
 
 		j, err := json.Marshal(p)

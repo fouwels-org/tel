@@ -9,10 +9,19 @@ services:
       dockerfile: Dockerfile
       context: "./"
     environment: 
-        CONFIG_TAGLIST: config/taglist.yml
-        CONFIG_DRIVER: config/mqtt.yml
-        OPC: opc.tcp://localhost:4840
         DRIVER: mqtt
+        OPC: opc.tcp://localhost:4840
+        CONFIG_TAGLIST: /config/taglist.yml
+        CONFIG_DRIVER: /config/driver.yml
     network_mode: host
-    volumes: 
-      - ./config:/config:ro
+    configs: 
+      - source: taglist
+        target: /config/taglist.yml
+      - source: driver
+        target: /config/driver.yml
+
+configs:
+  taglist:
+    file: config/taglist.yml
+  driver:
+    file: config/mqtt.yml

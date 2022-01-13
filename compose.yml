@@ -4,7 +4,7 @@
 
 services:
   mqtt:
-    image: registry2.lagoni.co.uk/lagoni-engineering/tel:dev
+    image: ghcr.io/fouwels/tel:dev
     build:
       dockerfile: Dockerfile
       context: "./"

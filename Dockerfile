@@ -11,7 +11,8 @@ ENV LIB61850_VERSION=1.5.0
 
 # Build LIC61850
 RUN git clone --depth 1 --branch v${LIB61850_VERSION} https://github.com/mz-automation/libiec61850.git
-RUN cd libiec61850 && make -j $(nproc) && make install
+RUN cd libiec61850 && mkdir =-p out
+RUN cd libiec61850/out && cmake .. && make -j $(nproc) && make install
 ENV GOBIN=/build/out
 
 COPY go.mod .

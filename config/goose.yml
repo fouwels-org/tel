@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2022 Kaelan Thijs Fouwels <kaelan.thijs@fouwels.com>
+#
+# SPDX-License-Identifier: MIT
+meta:
+  site: example
+  comment: example goose device
+goose:
+  device:
+    label: goose_1

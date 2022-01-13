@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM alpine:3.14.0 as build
+FROM alpine:3.15.0 as build
 
 # Install tools required for project
 RUN apk add go
@@ -16,7 +16,7 @@ RUN go mod download
 COPY . ./go
 RUN cd go && go install .
 
-FROM alpine:3.14.0
+FROM alpine:3.15.0
 COPY --from=build /build/out /build/out
 
 RUN addgroup -S tel && adduser -S tel -G tel

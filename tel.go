@@ -10,13 +10,8 @@ import (
 	"log"
 	"os"
 	"tel/config"
-	"tel/modbus"
-	"tel/mqtt"
+	"tel/drivers"
 )
-
-type Driver interface {
-	Run(ctx context.Context) error
-}
 
 func main() {
 
@@ -61,7 +56,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to load tags: %w", err)
 	}
 
-	var driver Driver
+	var driver drivers.Driver
 
 	switch cDriver {
 	case "modbus":
@@ -73,7 +68,7 @@ func run(ctx context.Context) error {
 
 		log.Printf("starting modbus as: %+v", configModbus.Modbus.Device)
 
-		d, err := modbus.NewModbus(configTags.Tags, configModbus.Modbus, cOpc)
+		d, err := drivers.NewModbus(configTags.Tags, configModbus.Modbus, cOpc)
 		if err != nil {
 			return fmt.Errorf("failed to create modbus driver: %w", err)
 		}
@@ -88,11 +83,27 @@ func run(ctx context.Context) error {
 
 		log.Printf("starting mqtt as: %+v", configMqtt.Mqtt.Device.Target)
 
-		d, err := mqtt.NewMQTT(configTags.Tags, configMqtt.Mqtt, cOpc)
+		d, err := drivers.NewMQTT(configTags.Tags, configMqtt.Mqtt, cOpc)
 		if err != nil {
 			return fmt.Errorf("failed to create mqtt driver: %w", err)
 		}
 		driver = d
+
+	case "goose":
+
+		configGoose, err := config.LoadGoose(cConfigDriver)
+		if err != nil {
+			return fmt.Errorf("failed to load mqtt configuration: %w", err)
+		}
+
+		log.Printf("starting mqtt as: %+v", configGoose.Goose.Device)
+
+		d, err := drivers.NewGoose(configTags.Tags, configGoose.Goose, cOpc)
+		if err != nil {
+			return fmt.Errorf("failed to create goose driver: %w", err)
+		}
+		driver = d
+
 	default:
 		return fmt.Errorf("driver %v not recognised", cDriver)
 	}

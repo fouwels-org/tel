@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package modbus
+package drivers
 
 import (
 	"context"

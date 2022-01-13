@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package mqtt
+package drivers
 
 import (
 	"context"

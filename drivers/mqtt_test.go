@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package modbus
+package drivers
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestModbus(t *testing.T) {
+func TestMQTT(t *testing.T) {
 
 	ctx := context.Background()
 	_opc := "opc.tcp://localhost:4840"
@@ -20,12 +20,12 @@ func TestModbus(t *testing.T) {
 		t.Fatalf("failed to load taglist: %v", err)
 	}
 
-	gconfig, err := config.LoadGoose("../config/goose.yml")
+	gconfig, err := config.LoadMqtt("../config/mqtt.yml")
 	if err != nil {
 		t.Fatalf("failed to load taglist: %v", err)
 	}
 
-	d, err := NewGoose(tags.Tags, gconfig.Goose, _opc)
+	d, err := NewMQTT(tags.Tags, gconfig.Mqtt, _opc)
 	if err != nil {
 		t.Fatalf("failed to create goose driver: %v", err)
 	}

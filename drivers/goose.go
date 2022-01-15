@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"tel/config"
+	"tel/goose"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
@@ -45,6 +46,11 @@ func (m *Goose) Run(ctx context.Context) error {
 	err := m.opc.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect OPC: %w", err)
+	}
+
+	e := goose.Start()
+	if e != 0 {
+		return fmt.Errorf("failed to start goose cgo (%v): %v", e, goose.GetError())
 	}
 
 	return fmt.Errorf("unexpected exit")

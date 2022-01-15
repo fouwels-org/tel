@@ -96,7 +96,7 @@ func run(ctx context.Context) error {
 			return fmt.Errorf("failed to load mqtt configuration: %w", err)
 		}
 
-		log.Printf("starting mqtt as: %+v", configGoose.Goose.Device)
+		log.Printf("starting goose as: %+v", configGoose.Goose.Device)
 
 		d, err := drivers.NewGoose(configTags.Tags, configGoose.Goose, cOpc)
 		if err != nil {

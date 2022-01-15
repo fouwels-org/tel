@@ -6,52 +6,53 @@
 #include "subscriber.h"
 
 static int running = 1;
+GooseSubscriber subscriber;
+GooseReceiver receiver;
 
-int Start() {
+int Initialize(char* network_interface, uint8_t* destination_mac,  uint16_t application_id, char* goCb_reference) {
 
-  printf("cgo: started subscriber\n");
-
-  uint8_t destination_mac[6] = {0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb};
-  uint16_t application_id = 0x0003;
-  char target[] = "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05"; 
-  char interface[] = "eth2";
-
-  GooseSubscriber subscriber = GooseSubscriber_create(target, NULL);
+  subscriber = GooseSubscriber_create(goCb_reference, NULL);
   GooseSubscriber_setDstMac(subscriber, destination_mac);
   GooseSubscriber_setAppId(subscriber, application_id);
-  GooseSubscriber_setListener(subscriber, gooseListener, NULL);
-  GooseSubscriber_setObserver(subscriber);
-
-  GooseReceiver receiver = GooseReceiver_create();
-  GooseReceiver_setInterfaceId(receiver, interface);
+  GooseSubscriber_setListener(subscriber, listener, NULL);
+  
+  receiver = GooseReceiver_create();
+  GooseReceiver_setInterfaceId(receiver, network_interface);
   GooseReceiver_addSubscriber(receiver, subscriber);
-  GooseReceiver_start(receiver);
-
-  // Subscribe to SigInt
-  signal(SIGINT, sigint_handler);
-
-  if (GooseReceiver_isRunning(receiver)) {
-
-    while (running) {
-      Thread_sleep(100);
-    }
-
-    GooseReceiver_stop(receiver);
-    GooseReceiver_destroy(receiver);
-
-  } else {
-
-    GooseReceiver_stop(receiver);
-    GooseReceiver_destroy(receiver);
-
-    setError("failed to create subscriber");
-    return 1;
-  }
 
   return 0;
 }
 
-static void gooseListener(GooseSubscriber subscriber, void *parameter) {
+int Configure_SetObserver() {
+  GooseSubscriber_setObserver(subscriber);
+  return 0;
+}
+
+int Start() {
+  GooseReceiver_startThreadless(receiver);
+
+  signal(SIGINT, sigint_handler);
+
+  if (GooseReceiver_isRunning(receiver) != 1) {
+    GooseReceiver_stopThreadless(receiver);
+    GooseReceiver_destroy(receiver);
+    setError("failed to create iec61850 subscriber");
+    return 1;
+  }
+
+  while (running){
+    uint8_t received = GooseReceiver_tick(receiver);
+    if (received != 1) {
+      Thread_sleep(1);
+    }
+  } 
+
+  GooseReceiver_stopThreadless(receiver);
+  GooseReceiver_destroy(receiver);
+  return 0;
+}
+
+static void listener(GooseSubscriber subscriber, void *parameter) {
 
   uint32_t valid = GooseSubscriber_isValid(subscriber);
   uint32_t error_code = GooseSubscriber_getParseError(subscriber);

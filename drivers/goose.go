@@ -48,9 +48,19 @@ func (m *Goose) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	e := goose.Start()
+	e := goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
 	if e != 0 {
-		return fmt.Errorf("failed to start goose cgo (%v): %v", e, goose.GetError())
+		return fmt.Errorf("failed to initialize goose: %v", goose.GetError())
+	}
+
+	// e = goose.Configure_SetObserver()
+	// if e != 0 {
+	// 	return fmt.Errorf("failed to set observer flag: %v", goose.GetError())
+	// }
+
+	e = goose.Start()
+	if e != 0 {
+		return fmt.Errorf("failed to start goose: %v", goose.GetError())
 	}
 
 	return fmt.Errorf("unexpected exit")

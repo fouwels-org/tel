@@ -12,7 +12,9 @@
 #include "libiec61850/linked_list.h"
 
 char *GetError();
+int Initialize(char* network_interface, uint8_t* destination_mac, uint16_t application_id,  char* goCb_reference);
 int Start();
+int Configure_SetObserver();
 
-static void gooseListener(GooseSubscriber subscriber, void* parameter);
+static void listener(GooseSubscriber subscriber, void* parameter);
 static void sigint_handler(int signalId);

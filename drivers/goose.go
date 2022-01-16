@@ -7,8 +7,10 @@ package drivers
 import (
 	"context"
 	"fmt"
+	"log"
 	"tel/config"
 	"tel/goose"
+	"time"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
@@ -48,22 +50,25 @@ func (m *Goose) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	e := goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
-	if e != 0 {
-		return fmt.Errorf("failed to initialize goose: %v", goose.GetError())
+	goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
+	//goose.Configure_SetObserver()
+	goose.Start()
+	defer goose.StopAndDestroy()
+
+	for {
+		ticked := goose.Tick()
+		if !ticked {
+			time.Sleep(1 * time.Millisecond)
+		} else {
+			msg := goose.GetCurrentMessage()
+			log.Printf("%+v", msg)
+
+			decoded := goose.DecodeBER(msg.ValueBER)
+			log.Printf("%+v", decoded)
+		}
 	}
 
-	// e = goose.Configure_SetObserver()
-	// if e != 0 {
-	// 	return fmt.Errorf("failed to set observer flag: %v", goose.GetError())
-	// }
-
-	e = goose.Start()
-	if e != 0 {
-		return fmt.Errorf("failed to start goose: %v", goose.GetError())
-	}
-
-	return fmt.Errorf("unexpected exit")
+	//return fmt.Errorf("unexpected exit")
 }
 func (m *Goose) tagLoad(tags []config.TagListTag, mtags []config.GooseTag) error {
 

@@ -7,3 +7,9 @@ meta:
 goose:
   device:
     label: goose_1
+    interface: eth2
+    application_id: 0x0003
+    gocb_reference: GTNETGSECTRL1/LLN0$GO$gcb01
+    filter_mac: 01-0c-cd-01-01-af
+    observer: false
+  tags: []

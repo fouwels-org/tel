@@ -6,8 +6,10 @@ package drivers
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"tel/config"
 	"tel/goose"
 	"time"
@@ -50,8 +52,17 @@ func (m *Goose) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
-	//goose.Configure_SetObserver()
+	mac := strings.ReplaceAll(m.device.FilterMac, "-", "")
+	hmac, err := hex.DecodeString(mac)
+	if err != nil {
+		return fmt.Errorf("failed to decode configured filter_mac: %w", err)
+	}
+	//goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
+	goose.Initialize(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
+
+	if m.device.Observer {
+		goose.Configure_SetObserver()
+	}
 	goose.Start()
 	defer goose.StopAndDestroy()
 
@@ -61,10 +72,12 @@ func (m *Goose) Run(ctx context.Context) error {
 			time.Sleep(1 * time.Millisecond)
 		} else {
 			msg := goose.GetCurrentMessage()
-			log.Printf("%+v", msg)
+			if len(msg.ValueBER) == 0 {
+				continue
+			}
 
-			decoded := goose.DecodeBER(msg.ValueBER)
-			log.Printf("%+v", decoded)
+			dec := goose.DecodeString(msg.ValueString)
+			log.Printf("%v", dec)
 		}
 	}
 

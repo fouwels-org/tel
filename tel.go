@@ -93,7 +93,7 @@ func run(ctx context.Context) error {
 
 		configGoose, err := config.LoadGoose(cConfigDriver)
 		if err != nil {
-			return fmt.Errorf("failed to load mqtt configuration: %w", err)
+			return fmt.Errorf("failed to load goose configuration: %w", err)
 		}
 
 		log.Printf("starting goose as: %+v", configGoose.Goose.Device)

@@ -21,7 +21,7 @@ void Initialize(char* network_interface, uint8_t* destination_mac,  uint16_t app
   subscriber = GooseSubscriber_create(goCb_reference, NULL);
   GooseSubscriber_setDstMac(subscriber, destination_mac);
   GooseSubscriber_setAppId(subscriber, application_id);
-  GooseSubscriber_setListener(subscriber, listener, NULL);
+  //GooseSubscriber_setListener(subscriber, listener, NULL);
   
   receiver = GooseReceiver_create();
   GooseReceiver_setInterfaceId(receiver, network_interface);
@@ -40,45 +40,54 @@ void Start() {
 }
 
 int Tick() {
-    return GooseReceiver_tick(receiver);
+
+    int result = GooseReceiver_tick(receiver);
+    if (result == 0) {
+      return 0;
+    }
+
+    currentMessage.valid = GooseSubscriber_isValid(subscriber);
+    currentMessage.error_code = GooseSubscriber_getParseError(subscriber);
+    currentMessage.timestamp = GooseSubscriber_getTimestamp(subscriber);
+    currentMessage.state_number = GooseSubscriber_getStNum(subscriber);
+    currentMessage.sequence_number = GooseSubscriber_getSqNum(subscriber);
+    currentMessage.configuration_reference = GooseSubscriber_getConfRev(subscriber);
+    currentMessage.application_id = GooseSubscriber_getAppId(subscriber);
+    currentMessage.ttl = GooseSubscriber_getTimeAllowedToLive(subscriber);
+
+    currentMessage.dataset = GooseSubscriber_getDataSet(subscriber);
+    currentMessage.goCb_reference = GooseSubscriber_getGoCbRef(subscriber);
+    currentMessage.go_id = GooseSubscriber_getGoId(subscriber);
+    
+    MmsValue* values = GooseSubscriber_getDataSetValues(subscriber);
+    MmsValue_printToBuffer(values, currentMessage.value_string, 4096);
+
+    if (values == NULL) {
+      printf("nil values returned\n");
+      currentMessage.valid = 0;
+      currentMessage.value_ber_length = 0;
+      return 1;
+    }
+    // Run with encode=0 to calculate max size
+    uint64_t len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 0);
+    if (len > (BER_VALUE_BUFFER_SIZE - 1)){
+      printf("failed to encode MMS, size > BER_VALUE_BUFFER_SIZE\n");
+      currentMessage.valid = 0;
+      currentMessage.value_ber_length = 0;
+      return 1;
+    }
+
+    // Run in anger
+    len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 1);
+    currentMessage.value_ber_length = len;
+
+    return 1;
 }
 
 void StopAndDestroy() {
   GooseReceiver_stopThreadless(receiver);
   GooseReceiver_destroy(receiver);
   free(currentMessage.value_string);
-}
-
-static void listener(GooseSubscriber subscriber, void *parameter) {
-
-  currentMessage.valid = GooseSubscriber_isValid(subscriber);
-  currentMessage.error_code = GooseSubscriber_getParseError(subscriber);
-  currentMessage.timestamp = GooseSubscriber_getTimestamp(subscriber);
-  currentMessage.state_number = GooseSubscriber_getStNum(subscriber);
-  currentMessage.sequence_number = GooseSubscriber_getSqNum(subscriber);
-  currentMessage.configuration_reference = GooseSubscriber_getConfRev(subscriber);
-  currentMessage.application_id = GooseSubscriber_getAppId(subscriber);
-  currentMessage.ttl = GooseSubscriber_getTimeAllowedToLive(subscriber);
-
-  currentMessage.dataset = GooseSubscriber_getDataSet(subscriber);
-  currentMessage.goCb_reference = GooseSubscriber_getGoCbRef(subscriber);
-  currentMessage.go_id = GooseSubscriber_getGoId(subscriber);
-  
-  MmsValue* values = GooseSubscriber_getDataSetValues(subscriber);
-  MmsValue_printToBuffer(values, currentMessage.value_string, 4096);
-
-  // Run with encode=0 to calculate max size
-  uint64_t len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 0);
-  if (len > (BER_VALUE_BUFFER_SIZE - 1)){
-    printf("failed to encode MMS, size > BER_VALUE_BUFFER_SIZE\n");
-    currentMessage.valid = 0;
-    currentMessage.value_ber_length = 0;
-    return;
-  }
-
-  // Run in anger
-  len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 1);
-  currentMessage.value_ber_length = len;
 }
 
   //MmsValue_printToBuffer(values, currentMessage.buffer, 4096);

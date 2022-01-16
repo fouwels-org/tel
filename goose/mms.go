@@ -4,6 +4,10 @@
 
 package goose
 
+import (
+	"strings"
+)
+
 type MMSType int
 
 const (
@@ -25,7 +29,26 @@ const (
 	MMS_DATA_ACCESS_ERROR MMSType = 15
 )
 
-func DecodeBER([]byte) string {
+// func DecodeBER(b []byte) (string, error) {
 
-	return ""
+// 	target := []asn1.BitString{}
+
+// 	packet, err := asn1.Unmarshal(b, &target)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to decode: %v", err)
+// 	}
+
+// 	log.Printf("%+v", packet)
+
+// 	return "", nil
+// }
+
+func DecodeString(s string) []string {
+
+	// This is a filthy hack for POC until the 61850 specific ASN/BER decoding is implemented.
+	working := s
+	working = strings.ReplaceAll(working, "{", "")
+	working = strings.ReplaceAll(working, "}", "")
+
+	return strings.Split(working, ",")
 }

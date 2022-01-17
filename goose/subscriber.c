@@ -5,7 +5,6 @@
 #include "subscriber.h"
 
 const uint64_t STRING_VALUE_BUFFER_SIZE=4096;
-const uint64_t BER_VALUE_BUFFER_SIZE=4096;
 
 static int running = 1;
 GooseSubscriber subscriber;
@@ -27,8 +26,7 @@ void Initialize(char* network_interface, uint8_t* destination_mac,  uint16_t app
   GooseReceiver_setInterfaceId(receiver, network_interface);
   GooseReceiver_addSubscriber(receiver, subscriber);
 
-  currentMessage.value_string = (char *) malloc(STRING_VALUE_BUFFER_SIZE);
-  currentMessage.value_ber = (char *) malloc(BER_VALUE_BUFFER_SIZE);
+  currentMessage.values_string = (char *) malloc(STRING_VALUE_BUFFER_SIZE);
 }
 
 void Configure_SetObserver() {
@@ -60,26 +58,14 @@ int Tick() {
     currentMessage.go_id = GooseSubscriber_getGoId(subscriber);
     
     MmsValue* values = GooseSubscriber_getDataSetValues(subscriber);
-    MmsValue_printToBuffer(values, currentMessage.value_string, 4096);
+    MmsValue_printToBuffer(values, currentMessage.values_string, STRING_VALUE_BUFFER_SIZE);
+    currentMessage.values = values;
 
     if (values == NULL) {
       printf("nil values returned\n");
       currentMessage.valid = 0;
-      currentMessage.value_ber_length = 0;
       return 1;
     }
-    // Run with encode=0 to calculate max size
-    uint64_t len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 0);
-    if (len > (BER_VALUE_BUFFER_SIZE - 1)){
-      printf("failed to encode MMS, size > BER_VALUE_BUFFER_SIZE\n");
-      currentMessage.valid = 0;
-      currentMessage.value_ber_length = 0;
-      return 1;
-    }
-
-    // Run in anger
-    len = MmsValue_encodeMmsData(values, currentMessage.value_ber, 0, 1);
-    currentMessage.value_ber_length = len;
 
     return 1;
 }
@@ -87,7 +73,7 @@ int Tick() {
 void StopAndDestroy() {
   GooseReceiver_stopThreadless(receiver);
   GooseReceiver_destroy(receiver);
-  free(currentMessage.value_string);
+  free(currentMessage.values_string);
 }
 
   //MmsValue_printToBuffer(values, currentMessage.buffer, 4096);

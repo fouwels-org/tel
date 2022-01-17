@@ -8,6 +8,7 @@ package goose
 #cgo CFLAGS: -I/usr/local/include
 #cgo LDFLAGS: -liec61850
 #include "subscriber.h"
+#include "libiec61850/mms_value.h"
 */
 import "C"
 import (
@@ -26,14 +27,9 @@ type Message struct {
 	Dataset                string
 	GoCBReference          string
 	GoId                   string
-	ValueString            string
-	ValueBER               []byte
+	ValuesString           string
+	Values                 MMSValue
 }
-
-// char* dataset;
-// char* goCb_reference;
-// char* go_id;
-// MmsValue* value;
 
 //Initialize the driver
 func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, GoCBReference string) {
@@ -75,8 +71,8 @@ func GetCurrentMessage() Message {
 		Dataset:                C.GoString(cmsg.dataset),
 		GoCBReference:          C.GoString(cmsg.goCb_reference),
 		GoId:                   C.GoString(cmsg.go_id),
-		ValueString:            C.GoString(cmsg.value_string),
-		ValueBER:               C.GoBytes(unsafe.Pointer(cmsg.value_ber), C.int(cmsg.value_ber_length)),
+		ValuesString:           C.GoString(cmsg.values_string),
+		Values:                 NewMMSValue(cmsg.values),
 	}
 	return msg
 }

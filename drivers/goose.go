@@ -72,12 +72,7 @@ func (m *Goose) Run(ctx context.Context) error {
 			time.Sleep(1 * time.Millisecond)
 		} else {
 			msg := goose.GetCurrentMessage()
-			if len(msg.ValueBER) == 0 {
-				continue
-			}
-
-			dec := goose.DecodeString(msg.ValueString)
-			log.Printf("%v", dec)
+			log.Printf("%+v", msg)
 		}
 	}
 

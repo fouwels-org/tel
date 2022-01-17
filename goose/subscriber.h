@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
+#ifndef SUBSCRIBER_H
+#define SUBSCRIBER_H
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,9 +26,8 @@ struct Message {
   char* dataset;
   char* goCb_reference;
   char* go_id;
-  uint8_t* value_ber;
-  uint64_t value_ber_length;
-  char* value_string;
+  MmsValue* values;
+  char* values_string;
 };
 
 char *GetError();
@@ -38,3 +40,5 @@ struct Message GetCurrentMessage();
 
 static void listener(GooseSubscriber subscriber, void* parameter);
 static void sigint_handler(int signalId);
+
+#endif /* SUBSCRIBER_H */

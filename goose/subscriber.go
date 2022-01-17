@@ -18,7 +18,7 @@ import (
 
 type Message struct {
 	Timestamp             time.Time
-	Valid                 uint32
+	Valid                 bool
 	ErrorCode             uint32
 	Dataset               string
 	ControlBlockReference string
@@ -31,8 +31,15 @@ type Message struct {
 	Values                MMSValue
 }
 
+type Subscriber struct {
+	subscriber C.GooseSubscriber
+	receiver   C.GooseReceiver
+}
+
 //Initialize the driver
-func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) {
+func NewSubscriber(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) *Subscriber {
+
+	s := Subscriber{}
 
 	cNetworkInterface := C.CString(networkInterface)
 	cDestinationMac := C.CBytes(destinationMac)
@@ -42,47 +49,55 @@ func Initialize(networkInterface string, destinationMac []byte, applicationId ui
 	defer C.free(unsafe.Pointer(cDestinationMac))
 	defer C.free(unsafe.Pointer(cGoCBReference))
 
-	C.Initialize(cNetworkInterface, (*C.uint8_t)(cDestinationMac), C.ushort(applicationId), cGoCBReference)
+	s.subscriber = C.GooseSubscriber_create(cGoCBReference, nil)
+	C.GooseSubscriber_setDstMac(s.subscriber, (*C.uint8_t)(cDestinationMac))
+	C.GooseSubscriber_setAppId(s.subscriber, C.ushort(applicationId))
+
+	s.receiver = C.GooseReceiver_create()
+	C.GooseReceiver_setInterfaceId(s.receiver, cNetworkInterface)
+	C.GooseReceiver_addSubscriber(s.receiver, s.subscriber)
+
+	return &s
 }
 
 //Start the driver
-func Start() {
-	C.Start()
+func (s *Subscriber) Start() {
+	C.GooseReceiver_startThreadless(s.receiver)
+}
+
+func (s *Subscriber) Configure_SetObserver() {
+	C.GooseSubscriber_setObserver(s.subscriber)
 }
 
 //Tick the driver
-func Tick() bool {
-	return int(C.Tick()) == 1
+func (s *Subscriber) Tick() bool {
+	result := bool(C.GooseReceiver_tick(s.receiver))
+	return result
 }
 
 //Get current message
-func GetCurrentMessage() Message {
-	cmsg := C.GetCurrentMessage()
+func (s *Subscriber) GetCurrentMessage() Message {
 
-	datetime := time.Unix(int64(uint64(cmsg.timestamp))/1000, 0)
+	datetime := time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0)
 	msg := Message{
-		Valid:                 uint32(cmsg.valid),
-		ErrorCode:             uint32(cmsg.error_code),
+		Valid:                 bool(C.GooseSubscriber_isValid(s.subscriber)),
+		ErrorCode:             uint32(C.GooseSubscriber_getParseError(s.subscriber)),
 		Timestamp:             datetime,
-		StateNumber:           uint32(cmsg.state_number),
-		SequenceNumber:        uint32(cmsg.sequence_number),
-		ConfigurationRevision: uint32(cmsg.configuration_reference),
-		ApplicationID:         uint32(cmsg.application_id),
-		TTL:                   uint32(cmsg.ttl),
-		Dataset:               C.GoString(cmsg.dataset),
-		ControlBlockReference: C.GoString(cmsg.goCb_reference),
-		Id:                    C.GoString(cmsg.go_id),
-		Values:                NewMMSValue(cmsg.values),
+		StateNumber:           uint32(C.GooseSubscriber_getStNum(s.subscriber)),
+		SequenceNumber:        uint32(C.GooseSubscriber_getSqNum(s.subscriber)),
+		ConfigurationRevision: uint32(C.GooseSubscriber_getConfRev(s.subscriber)),
+		ApplicationID:         uint32(C.GooseSubscriber_getAppId(s.subscriber)),
+		TTL:                   uint32(C.GooseSubscriber_getTimeAllowedToLive(s.subscriber)),
+		Dataset:               C.GoString(C.GooseSubscriber_getDataSet(s.subscriber)),
+		ControlBlockReference: C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber)),
+		Id:                    C.GoString(C.GooseSubscriber_getGoId(s.subscriber)),
+		Values:                NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber)),
 	}
 	return msg
 }
 
 //Stop and Destroy the drivr
-func StopAndDestroy() {
-	C.StopAndDestroy()
-}
-
-//Configure_SetObserver Set the observer flag to configure the driver to listen to any and all recieved messages.
-func Configure_SetObserver() {
-	C.Configure_SetObserver()
+func (s *Subscriber) StopAndDestroy() {
+	C.GooseReceiver_stopThreadless(s.receiver)
+	C.GooseReceiver_destroy(s.receiver)
 }

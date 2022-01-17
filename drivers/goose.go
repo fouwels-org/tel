@@ -57,21 +57,22 @@ func (m *Goose) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode configured filter_mac: %w", err)
 	}
+
 	//goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
-	goose.Initialize(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
+	g := goose.NewSubscriber(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
 
 	if m.device.Observer {
-		goose.Configure_SetObserver()
+		g.Configure_SetObserver()
 	}
-	goose.Start()
-	defer goose.StopAndDestroy()
+	g.Start()
+	defer g.StopAndDestroy()
 
 	for {
-		ticked := goose.Tick()
+		ticked := g.Tick()
 		if !ticked {
 			time.Sleep(1 * time.Millisecond)
 		} else {
-			msg := goose.GetCurrentMessage()
+			msg := g.GetCurrentMessage()
 			log.Printf("%+v", msg)
 		}
 	}

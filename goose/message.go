@@ -13,7 +13,6 @@ package goose
 import "C"
 import (
 	"fmt"
-	"reflect"
 )
 
 // Supported
@@ -107,7 +106,7 @@ func NewMMSValue(value *C.MmsValue) MMSValue {
 }
 
 func (m MMSValue) String() string {
-	return fmt.Sprintf("%v (%v)", m.Value(), reflect.TypeOf(m.Value()))
+	return fmt.Sprintf("%v", m.Value())
 }
 
 func (m MMSValue) Value() interface{} {

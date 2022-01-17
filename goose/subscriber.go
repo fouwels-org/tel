@@ -12,31 +12,31 @@ package goose
 */
 import "C"
 import (
+	"time"
 	"unsafe"
 )
 
 type Message struct {
-	Valid                  uint32
-	ErrorCode              uint32
-	Timestamp              uint64
-	StateNumber            uint32
-	SequenceNumber         uint32
-	ConfigurationReference uint32
-	ApplicationID          uint32
-	TTL                    uint32
-	Dataset                string
-	GoCBReference          string
-	GoId                   string
-	ValuesString           string
-	Values                 MMSValue
+	Timestamp             time.Time
+	Valid                 uint32
+	ErrorCode             uint32
+	Dataset               string
+	ControlBlockReference string
+	Id                    string
+	StateNumber           uint32
+	SequenceNumber        uint32
+	ApplicationID         uint32
+	ConfigurationRevision uint32
+	TTL                   uint32
+	Values                MMSValue
 }
 
 //Initialize the driver
-func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, GoCBReference string) {
+func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) {
 
 	cNetworkInterface := C.CString(networkInterface)
 	cDestinationMac := C.CBytes(destinationMac)
-	cGoCBReference := C.CString(GoCBReference)
+	cGoCBReference := C.CString(ControlBlockReference)
 
 	defer C.free(unsafe.Pointer(cNetworkInterface))
 	defer C.free(unsafe.Pointer(cDestinationMac))
@@ -59,20 +59,20 @@ func Tick() bool {
 func GetCurrentMessage() Message {
 	cmsg := C.GetCurrentMessage()
 
+	datetime := time.Unix(int64(uint64(cmsg.timestamp))/1000, 0)
 	msg := Message{
-		Valid:                  uint32(cmsg.valid),
-		ErrorCode:              uint32(cmsg.error_code),
-		Timestamp:              uint64(cmsg.timestamp),
-		StateNumber:            uint32(cmsg.state_number),
-		SequenceNumber:         uint32(cmsg.sequence_number),
-		ConfigurationReference: uint32(cmsg.configuration_reference),
-		ApplicationID:          uint32(cmsg.application_id),
-		TTL:                    uint32(cmsg.ttl),
-		Dataset:                C.GoString(cmsg.dataset),
-		GoCBReference:          C.GoString(cmsg.goCb_reference),
-		GoId:                   C.GoString(cmsg.go_id),
-		ValuesString:           C.GoString(cmsg.values_string),
-		Values:                 NewMMSValue(cmsg.values),
+		Valid:                 uint32(cmsg.valid),
+		ErrorCode:             uint32(cmsg.error_code),
+		Timestamp:             datetime,
+		StateNumber:           uint32(cmsg.state_number),
+		SequenceNumber:        uint32(cmsg.sequence_number),
+		ConfigurationRevision: uint32(cmsg.configuration_reference),
+		ApplicationID:         uint32(cmsg.application_id),
+		TTL:                   uint32(cmsg.ttl),
+		Dataset:               C.GoString(cmsg.dataset),
+		ControlBlockReference: C.GoString(cmsg.goCb_reference),
+		Id:                    C.GoString(cmsg.go_id),
+		Values:                NewMMSValue(cmsg.values),
 	}
 	return msg
 }

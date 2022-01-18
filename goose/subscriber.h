@@ -14,4 +14,7 @@
 #include "libiec61850/hal_thread.h"
 #include "libiec61850/linked_list.h"
 
+void callback_listener(GooseSubscriber sub, void* p);
+void register_listener(GooseSubscriber sub, void* s);
+
 #endif /* SUBSCRIBER_H */

@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strings"
 	"tel/config"
 	"tel/goose"
@@ -59,21 +58,18 @@ func (m *Goose) Run(ctx context.Context) error {
 	}
 
 	//goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
-	g := goose.NewSubscriber(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
+	goose.Initialize(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
 
 	if m.device.Observer {
-		g.Configure_SetObserver()
+		goose.Subscriber.Configure_SetObserver()
 	}
-	g.Start()
-	defer g.StopAndDestroy()
+	goose.Subscriber.Start()
+	defer goose.Subscriber.StopAndDestroy()
 
 	for {
-		ticked := g.Tick()
+		ticked := goose.Subscriber.Tick()
 		if !ticked {
 			time.Sleep(1 * time.Millisecond)
-		} else {
-			msg := g.GetCurrentMessage()
-			log.Printf("%+v", msg)
 		}
 	}
 

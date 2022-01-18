@@ -26,6 +26,11 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("failed to load: %v", err)
 	}
 
+	gs, err := LoadGoose("goose.yml")
+	if err != nil {
+		t.Fatalf("failed to load: %v", err)
+	}
+
 	for _, v := range tags.Tags {
 		log.Printf("tags: %+v", v)
 	}
@@ -35,7 +40,11 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	for _, v := range mq.Mqtt.Tags {
-		log.Printf("modbus: %+v", v)
+		log.Printf("mqtt: %+v", v)
+	}
+
+	for _, v := range gs.Goose.Endpoints {
+		log.Printf("goose: %+v", v)
 	}
 
 }

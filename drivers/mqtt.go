@@ -190,7 +190,6 @@ func (m *MQTT) iotick() error {
 
 		p := mqttMessage{
 			Timestamp:   time.Now(),
-			Tag:         v.Tag.Name,
 			StringValue: strval,
 			FloatValue:  fval,
 		}
@@ -200,7 +199,7 @@ func (m *MQTT) iotick() error {
 			return fmt.Errorf("failed to marshal: %v", err)
 		}
 
-		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, j)
+		token := m.mqc.Publish(v.Mqtt.Topic+"/"+v.Tag.Name, 0x00, true, j)
 
 		tout := token.WaitTimeout(time.Second * 1)
 		if !tout {

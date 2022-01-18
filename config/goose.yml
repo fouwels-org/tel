@@ -8,8 +8,18 @@ goose:
   device:
     label: goose_1
     interface: eth2
-    application_id: 0x0003
-    gocb_reference: GTNETGSECTRL1/LLN0$GO$gcb01
-    filter_mac: 01-0c-cd-01-01-af
-    observer: false
-  tags: []
+  endpoints: 
+    - control_block_reference: GTNETGSECTRL1/LLN0$GO$gcb01
+      application_id: 0x0003
+      filter_mac: "01-c0-cd-01-01-af"
+      observer: false
+      datasets:
+       - dataset: GTNETGSECTRL1/LLN0$GOOSE_outputs_1
+
+    - control_block_reference: GTNETGSECSWI_XCBR/LLN0$GO$Gcb05
+      application_id: 0x0003
+      filter_mac: "01-0c-cd-01-01-fb"
+      observer: false
+      datasets:
+       - dataset: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position
+      

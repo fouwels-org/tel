@@ -53,3 +53,9 @@ tags:
     description: Valve Proportional
     type: uint16
     default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1[0]
+    namespace: GOOSE
+    description: Unknown
+    type: uint16
+    default_value: 0

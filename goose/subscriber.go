@@ -7,8 +7,7 @@ package goose
 /*
 #cgo CFLAGS: -I/usr/local/include
 #cgo LDFLAGS: -liec61850
-#include "subscriber.h"
-#include "libiec61850/mms_value.h"
+#include "headers.h"
 */
 import "C"
 import (
@@ -16,73 +15,29 @@ import (
 	"unsafe"
 )
 
-type Header struct {
-	Timestamp             time.Time
-	Valid                 bool
-	ErrorCode             uint32
-	Dataset               string
-	ControlBlockReference string
-	Id                    string
-	StateNumber           uint32
-	SequenceNumber        uint32
-	ApplicationID         uint32
-	ConfigurationRevision uint32
-	TTL                   uint32
-}
-
-type Message struct {
-	Header Header
-	Values MMSValue
-}
-
-var Subscriber subscriber = subscriber{}
-
-type subscriber struct {
+type Subscriber struct {
 	subscriber C.GooseSubscriber
-	receiver   C.GooseReceiver
 }
 
-//Initialize the single driver instance. This is not thread safe, do not instatiate as an object.
-func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) {
+func NewSubscriber(destinationMac []byte, applicationId uint16, ControlBlockReference string) *Subscriber {
 
-	s := subscriber{}
-
-	cNetworkInterface := C.CString(networkInterface)
 	cDestinationMac := C.CBytes(destinationMac)
 	cGoCBReference := C.CString(ControlBlockReference)
 
-	defer C.free(unsafe.Pointer(cNetworkInterface))
 	defer C.free(unsafe.Pointer(cDestinationMac))
 	defer C.free(unsafe.Pointer(cGoCBReference))
 
-	s.subscriber = C.GooseSubscriber_create(cGoCBReference, nil)
-	C.GooseSubscriber_setDstMac(s.subscriber, (*C.uint8_t)(cDestinationMac))
-	C.GooseSubscriber_setAppId(s.subscriber, C.ushort(applicationId))
+	s := C.GooseSubscriber_create(cGoCBReference, nil)
+	C.GooseSubscriber_setDstMac(s, (*C.uint8_t)(cDestinationMac))
+	C.GooseSubscriber_setAppId(s, C.ushort(applicationId))
 
-	s.receiver = C.GooseReceiver_create()
-	C.GooseReceiver_setInterfaceId(s.receiver, cNetworkInterface)
-	C.GooseReceiver_addSubscriber(s.receiver, s.subscriber)
-
-	Subscriber = s
-}
-
-//Start the driver
-func (s *subscriber) Start() {
-	C.GooseReceiver_startThreadless(s.receiver)
-}
-
-func (s *subscriber) Configure_SetObserver() {
-	C.GooseSubscriber_setObserver(s.subscriber)
-}
-
-//Tick the driver
-func (s *subscriber) Tick() bool {
-	result := bool(C.GooseReceiver_tick(s.receiver))
-	return result
+	return &Subscriber{
+		subscriber: s,
+	}
 }
 
 //Get current message
-func (s *subscriber) GetCurrentMessage() Message {
+func (s *Subscriber) GetCurrentMessage() Message {
 
 	datetime := time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0)
 	msg := Message{
@@ -104,8 +59,6 @@ func (s *subscriber) GetCurrentMessage() Message {
 	return msg
 }
 
-//Stop and Destroy the drivr
-func (s *subscriber) StopAndDestroy() {
-	C.GooseReceiver_stopThreadless(s.receiver)
-	C.GooseReceiver_destroy(s.receiver)
+func (s *Subscriber) Configure_SetObserver() {
+	C.GooseSubscriber_setObserver(s.subscriber)
 }

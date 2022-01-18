@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
-#ifndef SUBSCRIBER_H
-#define SUBSCRIBER_H
+#ifndef HEADERS_H
+#define HEADERS_H
 
 #include <signal.h>
 #include <stdio.h>
@@ -13,5 +13,6 @@
 #include "libiec61850/goose_subscriber.h"
 #include "libiec61850/hal_thread.h"
 #include "libiec61850/linked_list.h"
+#include "libiec61850/mms_value.h"
 
-#endif /* SUBSCRIBER_H */
+#endif /* HEADERS_H */

@@ -19,13 +19,13 @@ import (
 )
 
 type Goose struct {
-	device config.GooseDevice
-	tagmap []gooseMap
-	opc    *opcua.Client
+	device    config.GooseDevice
+	endpoints []config.GooseEndpoint
+	tagmap    []gooseMap
+	opc       *opcua.Client
 }
 
 type gooseMap struct {
-	Goose  config.GooseTag
 	Tag    config.TagListTag
 	NodeID ua.NodeID
 }
@@ -33,13 +33,14 @@ type gooseMap struct {
 func NewGoose(tags []config.TagListTag, cfg config.GooseDriver, opc string) (*Goose, error) {
 
 	mb := Goose{
-		device: cfg.Device,
+		device:    cfg.Device,
+		endpoints: cfg.Endpoints,
 	}
 
-	err := mb.tagLoad(tags, cfg.Tags)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tags: %w", err)
-	}
+	// err := mb.tagLoad(tags, cfg.Tags)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to load tags: %w", err)
+	// }
 
 	mb.opc = opcua.NewClient(opc)
 	return &mb, nil
@@ -52,60 +53,76 @@ func (m *Goose) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to connect OPC: %w", err)
 	}
 
-	mac := strings.ReplaceAll(m.device.FilterMac, "-", "")
-	hmac, err := hex.DecodeString(mac)
-	if err != nil {
-		return fmt.Errorf("failed to decode configured filter_mac: %w", err)
+	req := goose.NewReceiver(m.device.Interface)
+
+	subs := []*goose.Subscriber{}
+
+	for _, e := range m.endpoints {
+
+		mac := strings.ReplaceAll(e.FilterMAC, "-", "")
+		hmac, err := hex.DecodeString(mac)
+		if err != nil {
+			return fmt.Errorf("failed to decode configured filter_mac: %w", err)
+		}
+
+		sub := goose.NewSubscriber(hmac, e.ApplicationID, e.ControlBlockReference)
+
+		if e.Observer {
+			sub.Configure_SetObserver()
+		}
+
+		subs = append(subs, sub)
 	}
 
-	//goose.Initialize("eth2", []byte{0x01, 0x0c, 0xcd, 0x01, 0x01, 0xfb}, 0x0003, "GTNETGSECSWI_XCBR/LLN0$GO$Gcb05")
-	goose.Initialize(m.device.Interface, hmac, m.device.ApplicationID, m.device.GoCbReference)
-
-	if m.device.Observer {
-		goose.Subscriber.Configure_SetObserver()
+	for _, s := range subs {
+		req.RegisterSubscriber(s)
 	}
-	goose.Subscriber.Start()
-	defer goose.Subscriber.StopAndDestroy()
+
+	req.Start()
+	defer req.StopAndDestroy()
 
 	for {
-		ticked := goose.Subscriber.Tick()
+		ticked := req.Tick()
 		if !ticked {
 			time.Sleep(1 * time.Millisecond)
 		} else {
-			msg := goose.Subscriber.GetCurrentMessage()
-			log.Printf("%+v", msg.Header)
+			for _, s := range subs {
+				msg := s.GetCurrentMessage()
+				log.Printf("%+v", msg.Header)
+			}
 		}
 	}
 
 	//return fmt.Errorf("unexpected exit")
 }
-func (m *Goose) tagLoad(tags []config.TagListTag, mtags []config.GooseTag) error {
 
-	for _, v := range mtags {
+// func (m *Goose) tagLoad(tags []config.TagListTag, mtags []config.GooseTag) error {
 
-		tag := config.TagListTag{}
+// 	for _, v := range mtags {
 
-		for _, x := range tags {
-			if v.Name == x.Name {
-				tag = x
-			}
-		}
+// 		tag := config.TagListTag{}
 
-		if tag.Name == "" {
-			return fmt.Errorf("goose tag %v was not found in global tag list", v)
-		}
+// 		for _, x := range tags {
+// 			if v.Name == x.Name {
+// 				tag = x
+// 			}
+// 		}
 
-		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
-		if err != nil {
-			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
-		}
+// 		if tag.Name == "" {
+// 			return fmt.Errorf("goose tag %v was not found in global tag list", v)
+// 		}
 
-		//m.tagmap = append(m.tagmap, record)
-		_ = nodeid
-	}
+// 		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
+// 		if err != nil {
+// 			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
+// 		}
 
-	return nil
-}
+// 		//m.tagmap = append(m.tagmap, record)
+// 		_ = nodeid
+// 	}
+
+// 	return nil
+// }
 func (m *Goose) opcwrite() error {
 
 	// for _, v := range m.tagmap {

@@ -10,19 +10,23 @@ type Goose struct {
 }
 
 type GooseDriver struct {
-	Device GooseDevice
-	Tags   []GooseTag
+	Device    GooseDevice
+	Endpoints []GooseEndpoint
 }
 
 type GooseDevice struct {
-	Label         string `yaml:"label"`
-	Interface     string `yaml:"interface"`
-	ApplicationID uint16 `yaml:"application_id"`
-	GoCbReference string `yaml:"gocb_reference"`
-	FilterMac     string `yaml:"filter_mac"`
-	Observer      bool   `yaml:"observer"`
+	Label     string `yaml:"label"`
+	Interface string `yaml:"interface"`
 }
 
-type GooseTag struct {
-	Name string
+type GooseEndpoint struct {
+	ControlBlockReference string         `yaml:"control_block_reference"`
+	ApplicationID         uint16         `yaml:"application_id"`
+	FilterMAC             string         `yaml:"filter_mac"`
+	Observer              bool           `yaml:"observer"`
+	Datasets              []GooseDataset `yaml:"datasets"`
+}
+
+type GooseDataset struct {
+	Dataset string `yaml:"dataset"`
 }

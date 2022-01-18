@@ -16,7 +16,7 @@ import (
 	"unsafe"
 )
 
-type Message struct {
+type Header struct {
 	Timestamp             time.Time
 	Valid                 bool
 	ErrorCode             uint32
@@ -28,18 +28,24 @@ type Message struct {
 	ApplicationID         uint32
 	ConfigurationRevision uint32
 	TTL                   uint32
-	Values                MMSValue
 }
 
-type Subscriber struct {
+type Message struct {
+	Header Header
+	Values MMSValue
+}
+
+var Subscriber subscriber = subscriber{}
+
+type subscriber struct {
 	subscriber C.GooseSubscriber
 	receiver   C.GooseReceiver
 }
 
-//Initialize the driver
-func NewSubscriber(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) *Subscriber {
+//Initialize the single driver instance. This is not thread safe, do not instatiate as an object.
+func Initialize(networkInterface string, destinationMac []byte, applicationId uint16, ControlBlockReference string) {
 
-	s := Subscriber{}
+	s := subscriber{}
 
 	cNetworkInterface := C.CString(networkInterface)
 	cDestinationMac := C.CBytes(destinationMac)
@@ -57,47 +63,49 @@ func NewSubscriber(networkInterface string, destinationMac []byte, applicationId
 	C.GooseReceiver_setInterfaceId(s.receiver, cNetworkInterface)
 	C.GooseReceiver_addSubscriber(s.receiver, s.subscriber)
 
-	return &s
+	Subscriber = s
 }
 
 //Start the driver
-func (s *Subscriber) Start() {
+func (s *subscriber) Start() {
 	C.GooseReceiver_startThreadless(s.receiver)
 }
 
-func (s *Subscriber) Configure_SetObserver() {
+func (s *subscriber) Configure_SetObserver() {
 	C.GooseSubscriber_setObserver(s.subscriber)
 }
 
 //Tick the driver
-func (s *Subscriber) Tick() bool {
+func (s *subscriber) Tick() bool {
 	result := bool(C.GooseReceiver_tick(s.receiver))
 	return result
 }
 
 //Get current message
-func (s *Subscriber) GetCurrentMessage() Message {
+func (s *subscriber) GetCurrentMessage() Message {
 
 	datetime := time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0)
 	msg := Message{
-		Valid:                 bool(C.GooseSubscriber_isValid(s.subscriber)),
-		ErrorCode:             uint32(C.GooseSubscriber_getParseError(s.subscriber)),
-		Timestamp:             datetime,
-		StateNumber:           uint32(C.GooseSubscriber_getStNum(s.subscriber)),
-		SequenceNumber:        uint32(C.GooseSubscriber_getSqNum(s.subscriber)),
-		ConfigurationRevision: uint32(C.GooseSubscriber_getConfRev(s.subscriber)),
-		ApplicationID:         uint32(C.GooseSubscriber_getAppId(s.subscriber)),
-		TTL:                   uint32(C.GooseSubscriber_getTimeAllowedToLive(s.subscriber)),
-		Dataset:               C.GoString(C.GooseSubscriber_getDataSet(s.subscriber)),
-		ControlBlockReference: C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber)),
-		Id:                    C.GoString(C.GooseSubscriber_getGoId(s.subscriber)),
-		Values:                NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber)),
+		Header: Header{
+			Valid:                 bool(C.GooseSubscriber_isValid(s.subscriber)),
+			ErrorCode:             uint32(C.GooseSubscriber_getParseError(s.subscriber)),
+			Timestamp:             datetime,
+			StateNumber:           uint32(C.GooseSubscriber_getStNum(s.subscriber)),
+			SequenceNumber:        uint32(C.GooseSubscriber_getSqNum(s.subscriber)),
+			ConfigurationRevision: uint32(C.GooseSubscriber_getConfRev(s.subscriber)),
+			ApplicationID:         uint32(C.GooseSubscriber_getAppId(s.subscriber)),
+			TTL:                   uint32(C.GooseSubscriber_getTimeAllowedToLive(s.subscriber)),
+			Dataset:               C.GoString(C.GooseSubscriber_getDataSet(s.subscriber)),
+			ControlBlockReference: C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber)),
+			Id:                    C.GoString(C.GooseSubscriber_getGoId(s.subscriber)),
+		},
+		Values: NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber)),
 	}
 	return msg
 }
 
 //Stop and Destroy the drivr
-func (s *Subscriber) StopAndDestroy() {
+func (s *subscriber) StopAndDestroy() {
 	C.GooseReceiver_stopThreadless(s.receiver)
 	C.GooseReceiver_destroy(s.receiver)
 }

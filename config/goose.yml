@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2022 Kaelan Thijs Fouwels <kaelan.thijs@fouwels.com>
+#
+# SPDX-License-Identifier: MIT
+meta:
+  site: example
+  comment: example goose device
+goose:
+  device: 
+    label: goose_1
+    interface: eth2
+    log_header: true
+    log_values: false
+  endpoints:
+    - control_block_reference: GTNETGSECSWI_XCBR/LLN0$GO$Gcb05
+      application_id: 3
+      filter_mac: "01-0c-cd-01-01-fb"
+      observer: false
+      datasets:
+        - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position
+          tags: 6
+            
+    - control_block_reference: "GTNETGSECTRL1/LLN0$GO$gcb01"
+      application_id: 3
+      filter_mac: "01-0c-cd-01-01-af"
+      observer: false
+      datasets:
+        - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1
+          tags: 26

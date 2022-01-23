@@ -25,8 +25,21 @@
             "env": {
                 "CONFIG_TAGLIST": "${workspaceFolder}/config/taglist.yml",
                 "CONFIG_DRIVER": "${workspaceFolder}/config/mqtt.yml",
-                "OPC": "opc.tcp://10.200.4.204:4840",
+                "OPC": "opc.tcp://localhost:4840",
                 "DRIVER": "mqtt",
+            }
+        },
+        {
+            "name": "goose",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {
+                "CONFIG_TAGLIST": "${workspaceFolder}/config/taglist.yml",
+                "CONFIG_DRIVER": "${workspaceFolder}/config/goose.yml",
+                "OPC": "opc.tcp://localhost:4840",
+                "DRIVER": "goose",
             }
         }
     ]

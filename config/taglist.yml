@@ -53,3 +53,111 @@ tags:
     description: Valve Proportional
     type: uint16
     default_value: 0
+
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-0
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 0
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-1
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 1
+    type: uint32
+    default_value: 0
+  
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-2
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 2
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-3
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 3
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-4
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 4
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position-5
+    namespace: GTNETGSECSWI_XCBR/LLN0
+    description: CBR_GSE_Position 5
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-0
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 0
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-1
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 1
+    type: int32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-2
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 2
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-3
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 3
+    type: bool
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-4
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 4
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-5
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 5
+    type: uint32
+    default_value: 0
+  
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-6
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 6
+    type: uint32
+    default_value: 0
+  
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-7
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 7
+    type: float64
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-8
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 8
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-9
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 9
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-10
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 10
+    type: uint32
+    default_value: 0
+
+  - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1-11
+    namespace: GTNETGSECTRL1/LLN0
+    description: GOOSE_outputs_1 11
+    type: uint32
+    default_value: 0

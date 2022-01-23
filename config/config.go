@@ -80,3 +80,24 @@ func LoadMqtt(path string) (MQTT, error) {
 
 	return c, nil
 }
+
+func LoadGoose(path string) (Goose, error) {
+
+	c := Goose{}
+
+	f, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return Goose{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	y := yaml.NewDecoder(f)
+	y.SetStrict(true)
+
+	err = y.Decode(&c)
+	if err != nil {
+		return Goose{}, fmt.Errorf("failed to load goose: %w", err)
+	}
+
+	return c, nil
+}

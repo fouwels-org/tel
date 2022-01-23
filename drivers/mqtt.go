@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package mqtt
+package drivers
 
 import (
 	"context"
@@ -25,9 +25,8 @@ type MQTT struct {
 }
 
 type mqttMap struct {
-	Mqtt   config.MQTTTag
-	Tag    config.TagListTag
-	NodeID ua.NodeID
+	Mqtt config.MQTTTag
+	Tag  config.TagListTag
 }
 
 type mqttMessage struct {
@@ -108,15 +107,9 @@ func (m *MQTT) tagLoad(tags []config.TagListTag, mtags []config.MQTTTag) error {
 			return fmt.Errorf("mqtt tag %v was not found in global tag list", v)
 		}
 
-		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
-		if err != nil {
-			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
-		}
-
 		record := mqttMap{
-			Mqtt:   v,
-			Tag:    tag,
-			NodeID: *nodeid,
+			Mqtt: v,
+			Tag:  tag,
 		}
 
 		m.tagmap = append(m.tagmap, record)
@@ -129,21 +122,26 @@ func (m *MQTT) iotick() error {
 
 	for _, v := range m.tagmap {
 
+		nid, err := v.Tag.NodeID()
+		if err != nil {
+			return fmt.Errorf("failed to parse nodeID for: %v: %w", v, err)
+		}
+
 		req := &ua.ReadRequest{
 			MaxAge:             0,
-			NodesToRead:        []*ua.ReadValueID{{NodeID: &v.NodeID}},
+			NodesToRead:        []*ua.ReadValueID{{NodeID: &nid}},
 			TimestampsToReturn: ua.TimestampsToReturnBoth,
 		}
 
 		resp, err := m.opc.Read(req)
 		if err != nil {
-			return fmt.Errorf("failed to read %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
+			return fmt.Errorf("failed to read %v (%v): %w", v.Tag.Name, nid, err)
 		}
 		if len(resp.Results) < 1 {
-			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
+			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, nid)
 		}
 		if resp.Results[0].Status != ua.StatusOK {
-			return fmt.Errorf("read failed for for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Status)
+			return fmt.Errorf("read failed for for %v (%v): %v", v.Tag.Name, nid, resp.Results[0].Status)
 		}
 
 		variant := resp.Results[0].Value
@@ -171,11 +169,11 @@ func (m *MQTT) iotick() error {
 			value = variant.Float()
 			fval = float64(variant.Float())
 		default:
-			return fmt.Errorf("unknown type for tag %v: %v", v.NodeID, variant)
+			return fmt.Errorf("unknown type for tag %v: %v", nid, variant)
 		}
 
 		strval := fmt.Sprintf("%v", value)
-		id := v.NodeID.String()
+		id := nid.String()
 		_, ok := m.buffer[id]
 		if !ok {
 			m.buffer[id] = strval
@@ -190,7 +188,6 @@ func (m *MQTT) iotick() error {
 
 		p := mqttMessage{
 			Timestamp:   time.Now(),
-			Tag:         v.Tag.Name,
 			StringValue: strval,
 			FloatValue:  fval,
 		}
@@ -200,7 +197,7 @@ func (m *MQTT) iotick() error {
 			return fmt.Errorf("failed to marshal: %v", err)
 		}
 
-		token := m.mqc.Publish(v.Mqtt.Topic, 0x00, true, j)
+		token := m.mqc.Publish(v.Mqtt.Topic+"/"+v.Tag.Name, 0x00, true, j)
 
 		tout := token.WaitTimeout(time.Second * 1)
 		if !tout {

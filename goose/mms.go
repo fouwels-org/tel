@@ -14,80 +14,60 @@ import (
 	"fmt"
 )
 
-// Supported
-type MmsArray []MMSValue
-type MmsBoolean bool
-type MmsBitString uint32
-type MmsInteger int32
-type MmsUnsigned uint32
-type MmsFloat float64
-
-// Unsupported
-type MmsStructure error
-type MmsOctetString error
-type MmsVisibleString error
-type MmsGeneralizedTime error
-type MmsBinaryTime error
-type MmsBCD error
-type MmsObjId error
-type MmsString error
-type MmsUTCTime error
-type MMSDataAccessError error
-
 type MMSType int
 
 const (
-	MMS_ARRAY             MMSType = 0
-	MMS_STRUCTURE         MMSType = 1
-	MMS_BOOLEAN           MMSType = 2
-	MMS_BIT_STRING        MMSType = 3
-	MMS_INTEGER           MMSType = 4
-	MMS_UNSIGNED          MMSType = 5
-	MMS_FLOAT             MMSType = 6
-	MMS_OCTET_STRING      MMSType = 7
-	MMS_VISIBLE_STRING    MMSType = 8
-	MMS_GENERALIZED_TIME  MMSType = 9
-	MMS_BINARY_TIME       MMSType = 10
-	MMS_BCD               MMSType = 11
-	MMS_OBJ_ID            MMSType = 12
-	MMS_STRING            MMSType = 13
-	MMS_UTC_TIME          MMSType = 14
-	MMS_DATA_ACCESS_ERROR MMSType = 15
+	MMSTypeArray           MMSType = 0
+	MMSTypeStructure       MMSType = 1
+	MMSTypeBoolean         MMSType = 2
+	MMSTypeBitstring       MMSType = 3
+	MMSTypeInteger         MMSType = 4
+	MMSTypeUnsigned        MMSType = 5
+	MMSTypeFloat           MMSType = 6
+	MMSTypeOctetString     MMSType = 7
+	MMSTypeVisibleString   MMSType = 8
+	MMSTypeGeneralizedTime MMSType = 9
+	MMSTypeBinaryTime      MMSType = 10
+	MMSTypeBCD             MMSType = 11
+	MMSTypeObjectId        MMSType = 12
+	MMSTypeString          MMSType = 13
+	MMSTypeUTCTime         MMSType = 14
+	MMSTypeDataAccessError MMSType = 15
 )
 
 func (m MMSType) String() string {
 	switch m {
-	case MMS_ARRAY:
+	case MMSTypeArray:
 		return "MMS_ARRAY"
-	case MMS_STRUCTURE:
+	case MMSTypeStructure:
 		return "MMS_STRUCTURE"
-	case MMS_BOOLEAN:
+	case MMSTypeBoolean:
 		return "MMS_BOOLEAN"
-	case MMS_BIT_STRING:
+	case MMSTypeBitstring:
 		return "MMS_BIT_STRING"
-	case MMS_INTEGER:
+	case MMSTypeInteger:
 		return "MMS_INTEGER"
-	case MMS_UNSIGNED:
+	case MMSTypeUnsigned:
 		return "MMS_UNSIGNED"
-	case MMS_FLOAT:
+	case MMSTypeFloat:
 		return "MMS_FLOAT"
-	case MMS_OCTET_STRING:
+	case MMSTypeOctetString:
 		return "MMS_OCTET_STRING"
-	case MMS_VISIBLE_STRING:
+	case MMSTypeVisibleString:
 		return "MMS_VISIBLE_STRING"
-	case MMS_GENERALIZED_TIME:
+	case MMSTypeGeneralizedTime:
 		return "MMS_GENERALIZED_TIME"
-	case MMS_BINARY_TIME:
+	case MMSTypeBinaryTime:
 		return "MMS_BINARY_TIME"
-	case MMS_BCD:
+	case MMSTypeBCD:
 		return "MMS_BCD"
-	case MMS_OBJ_ID:
+	case MMSTypeObjectId:
 		return "MMS_OBJ_ID"
-	case MMS_STRING:
+	case MMSTypeString:
 		return "MMS_STRING"
-	case MMS_UTC_TIME:
+	case MMSTypeUTCTime:
 		return "MMS_UTC_TIME"
-	case MMS_DATA_ACCESS_ERROR:
+	case MMSTypeDataAccessError:
 		return "MMS_DATA_ACCESS_ERROR"
 	default:
 		return "unknown"
@@ -98,42 +78,49 @@ type MMSValue struct {
 	value *C.MmsValue
 }
 
-func NewMMSValue(value *C.MmsValue) MMSValue {
+func NewMMSValue(value *C.MmsValue) (MMSValue, error) {
+	if value == nil {
+		return MMSValue{}, fmt.Errorf("MmsValue is a nil pointer, refusing to create")
+	}
 	return MMSValue{
 		value: value,
-	}
+	}, nil
 }
 
 func (m MMSValue) String() string {
-	return fmt.Sprintf("%v", m.Value())
+	return fmt.Sprintf("%v", m.Read())
 }
 
-func (m MMSValue) Value() interface{} {
+func (m MMSValue) Type() MMSType {
+	return MMSType(int(C.MmsValue_getType(m.value)))
+}
 
-	vtype := MMSType(int(C.MmsValue_getType(m.value)))
+func (m MMSValue) Read() interface{} {
 
-	switch vtype {
-	case MMS_ARRAY:
-		mmsArray := MmsArray{}
+	switch m.Type() {
+	case MMSTypeArray:
+		mmsArray := []MMSValue{}
 		len := int(C.MmsValue_getArraySize(m.value))
 		for i := 0; i < len; i++ {
 			v := C.MmsValue_getElement(m.value, C.int(i))
-			mmsArray = append(mmsArray, NewMMSValue(v))
+			gmms, err := NewMMSValue(v)
+			if err != nil {
+				return err
+			}
+			mmsArray = append(mmsArray, gmms)
 		}
 		return mmsArray
-	case MMS_BOOLEAN:
-		return MmsBoolean(C.MmsValue_getBoolean(m.value))
-	case MMS_BIT_STRING:
-		return MmsBitString(C.MmsValue_getBitStringAsInteger(m.value))
-	case MMS_INTEGER:
-		return MmsInteger(C.MmsValue_toInt32(m.value))
-	case MMS_UNSIGNED:
-		return MmsUnsigned(C.MmsValue_toUint32(m.value))
-	case MMS_FLOAT:
-		return MmsFloat(C.MmsValue_toDouble(m.value))
-	case MMS_DATA_ACCESS_ERROR:
-		return fmt.Errorf("MMS_DATA_ACCESS_ERROR")
+	case MMSTypeBoolean:
+		return bool(C.MmsValue_getBoolean(m.value))
+	case MMSTypeBitstring:
+		return uint32(C.MmsValue_getBitStringAsInteger(m.value))
+	case MMSTypeInteger:
+		return int32(C.MmsValue_toInt32(m.value))
+	case MMSTypeUnsigned:
+		return uint32(C.MmsValue_toUint32(m.value))
+	case MMSTypeFloat:
+		return float64(C.MmsValue_toDouble(m.value))
 	default:
-		return MmsStructure(fmt.Errorf("will not parse type %v", vtype))
+		return fmt.Errorf("unsupported type: %v", m.Type())
 	}
 }

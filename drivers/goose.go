@@ -26,24 +26,67 @@ type Goose struct {
 }
 
 type gooseMap struct {
-	Tag    config.TagListTag
-	NodeID ua.NodeID
+	Dataset string
+	Tag     config.TagListTag
+	gTag    config.GooseTag
 }
 
 func NewGoose(tags []config.TagListTag, cfg config.GooseDriver, opc string) (*Goose, error) {
 
-	mb := Goose{
+	g := Goose{
 		device:    cfg.Device,
 		endpoints: cfg.Endpoints,
 	}
 
-	// err := mb.tagLoad(tags, cfg.Tags)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to load tags: %w", err)
-	// }
+	err := g.tagLoad(tags, cfg.Endpoints)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tags: %w", err)
+	}
 
-	mb.opc = opcua.NewClient(opc)
-	return &mb, nil
+	g.opc = opcua.NewClient(opc)
+	return &g, nil
+}
+
+func (m *Goose) tagLoad(tags []config.TagListTag, endpoints []config.GooseEndpoint) error {
+
+	for _, e := range endpoints {
+
+		for _, d := range e.Datasets {
+
+			for _, t := range d.Tags {
+				tag := config.TagListTag{}
+
+				found := false
+				compoundName := fmt.Sprintf("%v-%v", d.Name, t.Index)
+
+				for _, x := range tags {
+
+					if found {
+						break
+					}
+
+					if compoundName == x.Name {
+						tag = x
+						found = true
+					}
+				}
+
+				if !found {
+					log.Printf("goose tag %v was not found in global tag list, skipped", compoundName)
+				}
+
+				record := gooseMap{
+					Tag:     tag,
+					Dataset: d.Name,
+					gTag:    t,
+				}
+
+				m.tagmap = append(m.tagmap, record)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *Goose) Run(ctx context.Context) error {
@@ -87,124 +130,91 @@ func (m *Goose) Run(ctx context.Context) error {
 			time.Sleep(1 * time.Millisecond)
 		} else {
 			for _, s := range subs {
-				msg := s.GetCurrentMessage()
-				log.Printf("%+v", msg.Header)
+
+				msg, err := s.GetCurrentMessage()
+				if err != nil {
+					log.Printf("failed to get message: %v", err)
+					continue
+				}
+				if m.device.Log {
+					log.Printf("%+v", msg.Header)
+				}
+
+				err = m.write(msg, msg.Value, 0)
+				if err != nil {
+					return fmt.Errorf("failed to write: %w", err)
+				}
+
 			}
 		}
 	}
-
-	//return fmt.Errorf("unexpected exit")
 }
 
-// func (m *Goose) tagLoad(tags []config.TagListTag, mtags []config.GooseTag) error {
+func (m *Goose) write(message goose.Message, value goose.MMSValue, index int) error {
 
-// 	for _, v := range mtags {
+	record := message.Value.Read()
+	switch record.(type) {
+	case []goose.MMSValue:
+		{
+			v := record.([]goose.MMSValue)
+			for index, i := range v {
+				m.write(message, i, index)
+			}
+		}
+	case bool, uint32, int32, float32, float64:
 
-// 		tag := config.TagListTag{}
+		mapper := config.TagListTag{}
+		found := false
+		for _, v := range m.tagmap {
+			if found {
+				break
+			}
+			if v.Dataset == message.Header.Dataset && v.gTag.Index == index {
+				mapper = v.Tag
+			}
+		}
+		if !found {
+			return fmt.Errorf("matching tag not found within: %v, skipped", message)
+		}
+		nid, err := mapper.NodeID()
+		if err != nil {
+			return fmt.Errorf("failed to parse nodeID within %v: %w", message, err)
+		}
 
-// 		for _, x := range tags {
-// 			if v.Name == x.Name {
-// 				tag = x
-// 			}
-// 		}
+		pvariant, err := ua.NewVariant(record)
+		if err != nil {
+			return fmt.Errorf("failed to encode value within %+v", message)
+		}
+		variant := *pvariant
+		req := &ua.WriteRequest{
+			NodesToWrite: []*ua.WriteValue{
+				{
+					NodeID:      &nid,
+					AttributeID: ua.AttributeIDValue,
+					Value: &ua.DataValue{
+						EncodingMask: ua.DataValueValue,
+						Value:        &variant,
+					},
+				},
+			},
+		}
 
-// 		if tag.Name == "" {
-// 			return fmt.Errorf("goose tag %v was not found in global tag list", v)
-// 		}
+		resp, err := m.opc.Write(req)
+		if err != nil {
+			return fmt.Errorf("write failed for %v: %w", nid.String(), err)
+		}
+		if len(resp.Results) < 1 {
+			return fmt.Errorf("no results returned for %v", nid.String())
+		}
+		if resp.Results[0].Error() != ua.StatusOK.Error() {
+			return fmt.Errorf("write failed for %v: %v", nid.String(), resp.Results[0].Error())
+		}
 
-// 		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
-// 		if err != nil {
-// 			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
-// 		}
-
-// 		//m.tagmap = append(m.tagmap, record)
-// 		_ = nodeid
-// 	}
-
-// 	return nil
-// }
-func (m *Goose) opcwrite() error {
-
-	// for _, v := range m.tagmap {
-	//
-	//	var variant ua.Variant
-	//
-	// 	switch v.Modbus.Type {
-	// 	case config.ModbusCoil:
-	// 		continue
-	// 	case config.ModbusDiscrete:
-	// 		pvariant, err := ua.NewVariant(m.buffer.discretes[v.Modbus.Index])
-	// 		if err != nil {
-	// 			return fmt.Errorf("failed to encode value for %+v", v.Tag.Name)
-	// 		}
-	// 		variant = *pvariant
-	// 	case config.ModbusHolding:
-	// 		continue
-	// 	case config.ModbusInput:
-	// 		pvariant, err := ua.NewVariant(m.buffer.input[v.Modbus.Index])
-	// 		if err != nil {
-	// 			return fmt.Errorf("failed to encode value for %+v", v.Tag.Name)
-	// 		}
-	// 		variant = *pvariant
-	// 	}
-
-	// 	req := &ua.WriteRequest{
-	// 		NodesToWrite: []*ua.WriteValue{
-	// 			{
-	// 				NodeID:      &v.NodeID,
-	// 				AttributeID: ua.AttributeIDValue,
-	// 				Value: &ua.DataValue{
-	// 					EncodingMask: ua.DataValueValue,
-	// 					Value:        &variant,
-	// 				},
-	// 			},
-	// 		},
-	// 	}
-
-	// 	resp, err := m.opc.Write(req)
-	// 	if err != nil {
-	// 		return fmt.Errorf("write failed for %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
-	// 	}
-	// 	if len(resp.Results) < 1 {
-	// 		return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
-	// 	}
-	// 	if resp.Results[0].Error() != ua.StatusOK.Error() {
-	// 		return fmt.Errorf("write failed for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Error())
-	// 	}
-	// }
-
-	return nil
-}
-
-func (m *Goose) ioread() error {
-
-	for _, v := range m.tagmap {
-
-		_ = v
-
-		// index := v.Modbus.Index
-		// switch v.Modbus.Type {
-		// case config.ModbusCoil:
-		// 	continue
-		// case config.ModbusDiscrete:
-		// 	result, err := m.conn.ReadDiscreteInputs(index, 1)
-		// 	if err != nil {
-		// 		return fmt.Errorf("failed to read discrete %v: %w", index, err)
-		// 	}
-		// 	if result[0] == 0x0000 {
-		// 		m.buffer.discretes[index] = false
-		// 	} else {
-		// 		m.buffer.discretes[index] = true
-		// 	}
-		// case config.ModbusHolding:
-		// 	continue
-		// case config.ModbusInput:
-		// 	result, err := m.conn.ReadInputRegisters(index, 1)
-		// 	if err != nil {
-		// 		return fmt.Errorf("failed to read input reg %v: %w", index, err)
-		// 	}
-		// 	m.buffer.input[index] = binary.BigEndian.Uint16(result)
-		// }
+	case error:
+		return fmt.Errorf("error type within %v, skipped: %v", message, message.Value.Read())
+	default:
+		return fmt.Errorf("unnkown type within %v, skipped: %v", message, message.Value.Read())
 	}
+
 	return nil
 }

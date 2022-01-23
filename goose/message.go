@@ -15,7 +15,7 @@ import "time"
 type Header struct {
 	Timestamp             time.Time
 	Valid                 bool
-	ErrorCode             uint32
+	ErrorCode             GooseParseError
 	ControlBlockReference string
 	Dataset               string
 	Id                    string
@@ -28,5 +28,5 @@ type Header struct {
 
 type Message struct {
 	Header Header
-	Values MMSValue
+	Value  MMSValue
 }

@@ -17,6 +17,7 @@ type GooseDriver struct {
 type GooseDevice struct {
 	Label     string `yaml:"label"`
 	Interface string `yaml:"interface"`
+	Log       bool   `yaml:"log"`
 }
 
 type GooseEndpoint struct {
@@ -28,5 +29,11 @@ type GooseEndpoint struct {
 }
 
 type GooseDataset struct {
-	Dataset string `yaml:"dataset"`
+	Name string     `yaml:"name"`
+	Tags []GooseTag `yaml:"tags"`
+}
+
+type GooseTag struct {
+	Index int    `yaml:"index"`
+	Type  string `yaml:"type"`
 }

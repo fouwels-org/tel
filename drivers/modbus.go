@@ -28,7 +28,6 @@ type Modbus struct {
 type modbusMap struct {
 	Modbus config.ModbusTag
 	Tag    config.TagListTag
-	NodeID ua.NodeID
 }
 
 type registerTable struct {
@@ -135,15 +134,9 @@ func (m *Modbus) tagLoad(tags []config.TagListTag, mtags []config.ModbusTag) err
 			return fmt.Errorf("modbus tag %v was not found in global tag list", v)
 		}
 
-		nodeid, err := ua.ParseNodeID("ns=1;s=" + v.Name)
-		if err != nil {
-			return fmt.Errorf("node id could not be parsed for tag: %+v: %w", v, err)
-		}
-
 		record := modbusMap{
 			Modbus: v,
 			Tag:    tag,
-			NodeID: *nodeid,
 		}
 
 		m.tagmap = append(m.tagmap, record)
@@ -156,21 +149,26 @@ func (m *Modbus) opcread() error {
 
 	for _, v := range m.tagmap {
 
+		nid, err := v.Tag.NodeID()
+		if err != nil {
+			return fmt.Errorf("failed to parse nodeID for: %v: %w", v, err)
+		}
+
 		req := &ua.ReadRequest{
 			MaxAge:             0,
-			NodesToRead:        []*ua.ReadValueID{{NodeID: &v.NodeID}},
+			NodesToRead:        []*ua.ReadValueID{{NodeID: &nid}},
 			TimestampsToReturn: ua.TimestampsToReturnBoth,
 		}
 
 		resp, err := m.opc.Read(req)
 		if err != nil {
-			return fmt.Errorf("failed to read %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
+			return fmt.Errorf("failed to read %v (%v): %w", v.Tag.Name, nid, err)
 		}
 		if len(resp.Results) < 1 {
-			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
+			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, nid)
 		}
 		if resp.Results[0].Status != ua.StatusOK {
-			return fmt.Errorf("read failed for for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Status)
+			return fmt.Errorf("read failed for for %v (%v): %v", v.Tag.Name, nid, resp.Results[0].Status)
 		}
 
 		variant := resp.Results[0].Value
@@ -215,10 +213,15 @@ func (m *Modbus) opcwrite() error {
 			variant = *pvariant
 		}
 
+		nid, err := v.Tag.NodeID()
+		if err != nil {
+			return fmt.Errorf("failed to parse nodeID for: %v: %w", v, err)
+		}
+
 		req := &ua.WriteRequest{
 			NodesToWrite: []*ua.WriteValue{
 				{
-					NodeID:      &v.NodeID,
+					NodeID:      &nid,
 					AttributeID: ua.AttributeIDValue,
 					Value: &ua.DataValue{
 						EncodingMask: ua.DataValueValue,
@@ -230,13 +233,13 @@ func (m *Modbus) opcwrite() error {
 
 		resp, err := m.opc.Write(req)
 		if err != nil {
-			return fmt.Errorf("write failed for %v (%v): %w", v.Tag.Name, v.NodeID.String(), err)
+			return fmt.Errorf("write failed for %v (%v): %w", v.Tag.Name, nid, err)
 		}
 		if len(resp.Results) < 1 {
-			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, v.NodeID.String())
+			return fmt.Errorf("no results returned for %v (%v)", v.Tag.Name, nid)
 		}
 		if resp.Results[0].Error() != ua.StatusOK.Error() {
-			return fmt.Errorf("write failed for %v (%v): %v", v.Tag.Name, v.NodeID.String(), resp.Results[0].Error())
+			return fmt.Errorf("write failed for %v (%v): %v", v.Tag.Name, nid, resp.Results[0].Error())
 		}
 	}
 

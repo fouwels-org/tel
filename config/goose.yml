@@ -5,21 +5,87 @@ meta:
   site: example
   comment: example goose device
 goose:
-  device:
+  device: 
     label: goose_1
     interface: eth2
-  endpoints: 
-    - control_block_reference: GTNETGSECTRL1/LLN0$GO$gcb01
-      application_id: 0x0003
-      filter_mac: "01-c0-cd-01-01-af"
-      observer: false
-      datasets:
-       - dataset: GTNETGSECTRL1/LLN0$GOOSE_outputs_1
-
+    log: true
+  endpoints:
     - control_block_reference: GTNETGSECSWI_XCBR/LLN0$GO$Gcb05
       application_id: 0x0003
       filter_mac: "01-0c-cd-01-01-fb"
       observer: false
       datasets:
-       - dataset: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position
-      
+        - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position
+          tags:
+          - index: 0
+            type: uint32
+          - index: 1
+            type: uint32
+          - index: 2
+            type: uint32
+          - index: 3
+            type: uint32
+          - index: 4
+            type: uint32
+          - index: 5  
+            type: uint32
+            
+    - control_block_reference: GTNETGSECTRL1/LLN0$GO$gcb01
+      application_id: 0x0003
+      filter_mac: "01-c0-cd-01-01-af"
+      observer: false
+      datasets:
+        - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1
+          tags:
+          - index: 0
+            type: uint32
+          - index: 1
+            type: uint32
+          - index: 2
+            type: uint32
+          - index: 3
+            type: bool
+          - index: 4
+            type: uint32
+          - index: 5
+            type: uint32
+          - index: 6
+            type: uint32
+          - index: 7
+            type: float32
+          - index: 8
+            type: uint32
+          - index: 9
+            type: uint32
+          - index: 10
+            type: uint32
+          - index: 11
+            type: uint32
+          - index: 12
+            type: uint32
+          - index: 13
+            type: uint32
+          - index: 14
+            type: uint32
+          - index: 15
+            type: uint32
+          - index: 16
+            type: uint32
+          - index: 17
+            type: uint32
+          - index: 18
+            type: uint32
+          - index: 19
+            type: uint32
+          - index: 20
+            type: uint32
+          - index: 21
+            type: uint32
+          - index: 22
+            type: uint32
+          - index: 23
+            type: uint32
+          - index: 24
+            type: uint32
+          - index: 25
+            type: uint32

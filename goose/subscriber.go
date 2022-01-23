@@ -11,6 +11,7 @@ package goose
 */
 import "C"
 import (
+	"fmt"
 	"time"
 	"unsafe"
 )
@@ -37,13 +38,29 @@ func NewSubscriber(destinationMac []byte, applicationId uint16, ControlBlockRefe
 }
 
 //Get current message
-func (s *Subscriber) GetCurrentMessage() Message {
+func (s *Subscriber) GetCurrentMessage() (Message, error) {
+
+	errCode := GooseParseError(C.GooseSubscriber_getParseError(s.subscriber))
+	if errCode != GooseParseErrorNone {
+		return Message{}, fmt.Errorf("parse error returned: %v", errCode)
+	}
+
+	valid := bool(C.GooseSubscriber_isValid(s.subscriber))
+	if !valid {
+		return Message{}, fmt.Errorf("message marked as invalid")
+	}
+
+	value, err := NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber))
+	if err != nil {
+		return Message{}, fmt.Errorf("could not cast create MmsValue: %w", err)
+	}
 
 	datetime := time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0)
+
 	msg := Message{
 		Header: Header{
-			Valid:                 bool(C.GooseSubscriber_isValid(s.subscriber)),
-			ErrorCode:             uint32(C.GooseSubscriber_getParseError(s.subscriber)),
+			Valid:                 valid,
+			ErrorCode:             errCode,
 			Timestamp:             datetime,
 			StateNumber:           uint32(C.GooseSubscriber_getStNum(s.subscriber)),
 			SequenceNumber:        uint32(C.GooseSubscriber_getSqNum(s.subscriber)),
@@ -54,9 +71,9 @@ func (s *Subscriber) GetCurrentMessage() Message {
 			ControlBlockReference: C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber)),
 			Id:                    C.GoString(C.GooseSubscriber_getGoId(s.subscriber)),
 		},
-		Values: NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber)),
+		Value: value,
 	}
-	return msg
+	return msg, nil
 }
 
 func (s *Subscriber) Configure_SetObserver() {

@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	log.SetFlags(log.Lmicroseconds | log.LUTC)
+	log.SetFlags(0)
 
 	ctx, ctxx := context.WithCancel(context.Background())
 	err := run(ctx)

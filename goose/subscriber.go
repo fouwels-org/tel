@@ -20,7 +20,7 @@ type Subscriber struct {
 	subscriber C.GooseSubscriber
 }
 
-func NewSubscriber(destinationMac []byte, applicationId uint16, ControlBlockReference string) *Subscriber {
+func NewSubscriber(destinationMac []byte, applicationId uint16, ControlBlockReference string) Subscriber {
 
 	cDestinationMac := C.CBytes(destinationMac)
 	cGoCBReference := C.CString(ControlBlockReference)
@@ -32,36 +32,41 @@ func NewSubscriber(destinationMac []byte, applicationId uint16, ControlBlockRefe
 	C.GooseSubscriber_setDstMac(s, (*C.uint8_t)(cDestinationMac))
 	C.GooseSubscriber_setAppId(s, C.ushort(applicationId))
 
-	return &Subscriber{
+	return Subscriber{
 		subscriber: s,
 	}
 }
 
+func (s Subscriber) String() string {
+	gocb := C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber))
+	return gocb
+}
+
 //Get current message
-func (s *Subscriber) GetCurrentMessage() (Message, error) {
+func (s Subscriber) GetCurrentMessage() (Message, error) {
 
 	errCode := GooseParseError(C.GooseSubscriber_getParseError(s.subscriber))
 	if errCode != GooseParseErrorNone {
 		return Message{}, fmt.Errorf("parse error returned: %v", errCode)
 	}
 
-	valid := bool(C.GooseSubscriber_isValid(s.subscriber))
-	if !valid {
-		return Message{}, fmt.Errorf("message marked as invalid")
-	}
+	pdstmac := C.CBytes(make([]byte, 6))
+	psrcmac := C.CBytes(make([]byte, 6))
 
-	value, err := NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber))
-	if err != nil {
-		return Message{}, fmt.Errorf("could not cast create MmsValue: %w", err)
-	}
+	defer C.free(unsafe.Pointer(pdstmac))
+	defer C.free(unsafe.Pointer(psrcmac))
 
-	datetime := time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0)
+	C.GooseSubscriber_getDstMac(s.subscriber, (*C.uint8_t)(pdstmac))
+	C.GooseSubscriber_getSrcMac(s.subscriber, (*C.uint8_t)(psrcmac))
+
+	dstmac := C.GoBytes(pdstmac, 6)
+	srcmac := C.GoBytes(psrcmac, 6)
 
 	msg := Message{
 		Header: Header{
-			Valid:                 valid,
+			Valid:                 bool(C.GooseSubscriber_isValid(s.subscriber)),
 			ErrorCode:             errCode,
-			Timestamp:             datetime,
+			Timestamp:             time.Unix(int64(uint64(C.GooseSubscriber_getTimestamp(s.subscriber)))/1000, 0),
 			StateNumber:           uint32(C.GooseSubscriber_getStNum(s.subscriber)),
 			SequenceNumber:        uint32(C.GooseSubscriber_getSqNum(s.subscriber)),
 			ConfigurationRevision: uint32(C.GooseSubscriber_getConfRev(s.subscriber)),
@@ -70,12 +75,15 @@ func (s *Subscriber) GetCurrentMessage() (Message, error) {
 			Dataset:               C.GoString(C.GooseSubscriber_getDataSet(s.subscriber)),
 			ControlBlockReference: C.GoString(C.GooseSubscriber_getGoCbRef(s.subscriber)),
 			Id:                    C.GoString(C.GooseSubscriber_getGoId(s.subscriber)),
+			DestinationMAC:        dstmac,
+			SourceMAC:             srcmac,
 		},
-		Value: value,
+		Value: NewMMSValue(C.GooseSubscriber_getDataSetValues(s.subscriber)),
 	}
+
 	return msg, nil
 }
 
-func (s *Subscriber) Configure_SetObserver() {
+func (s Subscriber) Configure_SetObserver() {
 	C.GooseSubscriber_setObserver(s.subscriber)
 }

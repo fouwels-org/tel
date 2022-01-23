@@ -33,6 +33,7 @@ const (
 	MMSTypeString          MMSType = 13
 	MMSTypeUTCTime         MMSType = 14
 	MMSTypeDataAccessError MMSType = 15
+	MMSTypeNull            MMSType = 255
 )
 
 func (m MMSType) String() string {
@@ -69,8 +70,10 @@ func (m MMSType) String() string {
 		return "MMS_UTC_TIME"
 	case MMSTypeDataAccessError:
 		return "MMS_DATA_ACCESS_ERROR"
+	case MMSTypeNull:
+		return "NULL"
 	default:
-		return "unknown"
+		return "UNKNOWN"
 	}
 }
 
@@ -78,20 +81,27 @@ type MMSValue struct {
 	value *C.MmsValue
 }
 
-func NewMMSValue(value *C.MmsValue) (MMSValue, error) {
-	if value == nil {
-		return MMSValue{}, fmt.Errorf("MmsValue is a nil pointer, refusing to create")
-	}
+func NewMMSValue(value *C.MmsValue) MMSValue {
 	return MMSValue{
 		value: value,
-	}, nil
+	}
+}
+
+func (m MMSValue) IsNull() bool {
+	return m.value == nil
 }
 
 func (m MMSValue) String() string {
+	if m.IsNull() {
+		return fmt.Sprintf("%v", "nil")
+	}
 	return fmt.Sprintf("%v", m.Read())
 }
 
 func (m MMSValue) Type() MMSType {
+	if m.IsNull() {
+		return MMSTypeNull
+	}
 	return MMSType(int(C.MmsValue_getType(m.value)))
 }
 
@@ -103,10 +113,8 @@ func (m MMSValue) Read() interface{} {
 		len := int(C.MmsValue_getArraySize(m.value))
 		for i := 0; i < len; i++ {
 			v := C.MmsValue_getElement(m.value, C.int(i))
-			gmms, err := NewMMSValue(v)
-			if err != nil {
-				return err
-			}
+			gmms := NewMMSValue(v)
+
 			mmsArray = append(mmsArray, gmms)
 		}
 		return mmsArray

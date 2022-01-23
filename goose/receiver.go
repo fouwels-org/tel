@@ -31,23 +31,23 @@ func NewReceiver(networkInterface string) *Receiver {
 	}
 }
 
-func (r *Receiver) RegisterSubscriber(s *Subscriber) {
+func (r Receiver) RegisterSubscriber(s Subscriber) {
 	C.GooseReceiver_addSubscriber(r.receiver, s.subscriber)
 }
 
 //Start the driver
-func (r *Receiver) Start() {
+func (r Receiver) Start() {
 	C.GooseReceiver_startThreadless(r.receiver)
 }
 
 //Tick the driver
-func (r *Receiver) Tick() bool {
+func (r Receiver) Tick() bool {
 	result := bool(C.GooseReceiver_tick(r.receiver))
 	return result
 }
 
 //Stop and Destroy the drivr
-func (r *Receiver) StopAndDestroy() {
+func (r Receiver) StopAndDestroy() {
 	C.GooseReceiver_stopThreadless(r.receiver)
 	C.GooseReceiver_destroy(r.receiver)
 }

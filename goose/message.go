@@ -24,6 +24,8 @@ type Header struct {
 	ApplicationID         uint32
 	ConfigurationRevision uint32
 	TTL                   uint32
+	DestinationMAC        []uint8
+	SourceMAC             []uint8
 }
 
 type Message struct {

@@ -3,17 +3,21 @@
 # SPDX-License-Identifier: MIT
 
 services:
-  mqtt:
+  driver:
     image: ghcr.io/fouwels/tel:dev
     build:
       dockerfile: Dockerfile
       context: "./"
     environment: 
-        DRIVER: mqtt
+        DRIVER: goose
         OPC: opc.tcp://localhost:4840
         CONFIG_TAGLIST: /config/taglist.yml
         CONFIG_DRIVER: /config/driver.yml
+    # Required for GOOSE/raw sockets (only)
+    user: root
     network_mode: host
+    cap_add:
+      - cap_net_admin
     configs: 
       - source: taglist
         target: /config/taglist.yml
@@ -24,4 +28,4 @@ configs:
   taglist:
     file: config/taglist.yml
   driver:
-    file: config/mqtt.yml
+    file: config/goose.yml

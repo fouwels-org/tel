@@ -15,13 +15,13 @@ type MQTTDriver struct {
 }
 
 type MQTTDevice struct {
-	Label       string
-	Target      string
-	ClientID    string `yaml:"client_id"`
-	Username    string
-	Token       string
-	KeepaliveMs int `yaml:"keepalive_ms"`
-	ScantimeMs  int `yaml:"scantime_ms"`
+	Label          string
+	Target         string
+	ClientID       string `yaml:"client_id"`
+	Username       string
+	Token          string
+	SubscriptionMs int `yaml:"subscription_ms"`
+	KeepAliveMs    int `yaml:"keepalive_ms"`
 }
 
 type MQTTTag struct {

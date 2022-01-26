@@ -7,26 +7,50 @@ meta:
 mqtt:
   device:
     label: mqtt_cloud
-    target: tcps://telemetry.lagoni.co.uk:8883
+    target: ssl://telemetry.lagoni.co.uk:8883
     client_id: telemetry_site
-    username: service
+    username: edge
     token: 5069-ceb6-d88c-9e52-45c4-fb0c
-    scantime_ms: 500
+    scantime_ms: 100
     keepalive_ms: 5000
   tags:
-    - name: VALVE_OPEN
-      topic: scada/tags
-    - name: VALVE_CLOSE
-      topic: scada/tags
-    - name: VALVE_LIMIT_A
-      topic: scada/tags
-    - name: VALVE_LIMIT_B
-      topic: scada/tags
-    - name: VALVE_FLOW_A
-      topic: scada/tags
-    - name: VALVE_FLOW_B
-      topic: scada/tags
-    - name: VALVE_FLOW_C
-      topic: scada/tags
-    - name: VALVE_PROPORTIONAL
-      topic: scada/tags
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/0
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/0
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/0
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/1
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/2
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/3
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/4
+      topic: GOOSE
+    - name: GTNETGSECSWI_XCBR/LLN0$XCBR_GSE_Position/5
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/0
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/1
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/2
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/3
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/4
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/5
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/6
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/7
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/8
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/9
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/10
+      topic: GOOSE
+    - name: GTNETGSECTRL1/LLN0$GOOSE_outputs_1/11
+      topic: GOOSE

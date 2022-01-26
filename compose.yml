@@ -9,15 +9,15 @@ services:
       dockerfile: Dockerfile
       context: "./"
     environment: 
-        DRIVER: goose
+        DRIVER: mqtt
         OPC: opc.tcp://localhost:4840
         CONFIG_TAGLIST: /config/taglist.yml
         CONFIG_DRIVER: /config/driver.yml
     # Required for GOOSE/raw sockets (only)
-    user: root
+    # user: root
     network_mode: host
-    cap_add:
-      - cap_net_admin
+    # cap_add:
+    #   - cap_net_admin
     configs: 
       - source: taglist
         target: /config/taglist.yml
@@ -28,4 +28,4 @@ configs:
   taglist:
     file: config/taglist.yml
   driver:
-    file: config/goose.yml
+    file: config/mqtt.yml

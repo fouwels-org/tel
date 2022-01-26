@@ -30,10 +30,11 @@ type mqttMap struct {
 }
 
 type mqttMessage struct {
-	Timestamp   time.Time `json:"timestamp"`
-	Tag         string    `json:"tag"`
-	StringValue string    `json:"string_value"`
-	FloatValue  float64   `json:"float_value"`
+	Timestamp time.Time   `json:"timestamp"`
+	String    string      `json:"string_value"`
+	Type      string      `json:"type"`
+	Numeric   float64     `json:"float_value"`
+	Value     interface{} `json:"value"`
 }
 
 func NewMQTT(tags []config.TagListTag, cfg config.MQTTDriver, opc string) (*MQTT, error) {
@@ -145,51 +146,46 @@ func (m *MQTT) iotick() error {
 		}
 
 		variant := resp.Results[0].Value
-		tp := variant.Type()
-		var value interface{}
+		//tp := variant.Type()
 
-		fval := 0.0
+		//var value interface{}
+		//var val interface{}
 
-		switch tp {
-		case ua.TypeIDBoolean:
-			value = variant.Bool()
-			b := variant.Bool()
-			if !b {
-				fval = float64(0)
-			} else {
-				fval = float64(1)
-			}
-		case ua.TypeIDInt16, ua.TypeIDInt32, ua.TypeIDInt64:
-			value = variant.Int()
-			fval = float64(variant.Int())
-		case ua.TypeIDUint16, ua.TypeIDUint32, ua.TypeIDUint64:
-			value = variant.Uint()
-			fval = float64(variant.Uint())
-		case ua.TypeIDFloat, ua.TypeIDDouble:
-			value = variant.Float()
-			fval = float64(variant.Float())
-		default:
-			return fmt.Errorf("unknown type for tag %v: %v", nid, variant)
-		}
+		// switch tp {
+		// case ua.TypeIDBoolean:
+		// 	value = variant.Bool()
+		// 	b := variant.Bool()
+		// 	val = b
+		// case ua.TypeIDInt16, ua.TypeIDInt32, ua.TypeIDInt64:
+		// 	value = variant.Int()
+		// 	fval = float64(variant.Int())
+		// case ua.TypeIDUint16, ua.TypeIDUint32, ua.TypeIDUint64:
+		// 	value = variant.Uint()
+		// 	fval = float64(variant.Uint())
+		// case ua.TypeIDFloat, ua.TypeIDDouble:
+		// 	value = variant.Float()
+		// 	fval = float64(variant.Float())
+		// default:
+		// 	return fmt.Errorf("unknown type for tag %v: %v", nid, variant)
+		// }
 
-		strval := fmt.Sprintf("%v", value)
-		id := nid.String()
-		_, ok := m.buffer[id]
-		if !ok {
-			m.buffer[id] = strval
-		}
+		// strval := fmt.Sprintf("%v", value)
+		// id := nid.String()
+		// _, ok := m.buffer[id]
+		// if !ok {
+		// 	m.buffer[id] = strval
+		// }
 
-		// if no change, skip
-		if ok && m.buffer[id] == strval {
-			continue
-		}
+		// // if no change, skip
+		// if ok && m.buffer[id] == strval {
+		// 	continue
+		// }
 
-		m.buffer[id] = strval
+		// m.buffer[id] = strval
 
 		p := mqttMessage{
-			Timestamp:   time.Now(),
-			StringValue: strval,
-			FloatValue:  fval,
+			Timestamp: time.Now(),
+			Value:     variant.Value(),
 		}
 
 		j, err := json.Marshal(p)

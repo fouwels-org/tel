@@ -55,7 +55,7 @@ func (m *Goose) tagLoad(tags []config.TagListTag, endpoints []config.GooseEndpoi
 
 			for t := 0; t < d.Tags; t++ {
 
-				compoundName := fmt.Sprintf("%v-%v", d.Name, t)
+				compoundName := fmt.Sprintf("%v/%v", d.Name, t)
 				tag := config.TagListTag{}
 				found := false
 

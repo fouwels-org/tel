@@ -31,9 +31,7 @@ type mqttMap struct {
 
 type mqttMessage struct {
 	Timestamp time.Time   `json:"timestamp"`
-	String    string      `json:"string_value"`
 	Type      string      `json:"type"`
-	Numeric   float64     `json:"float_value"`
 	Value     interface{} `json:"value"`
 }
 
@@ -182,10 +180,11 @@ func (m *MQTT) iotick() error {
 		// }
 
 		// m.buffer[id] = strval
-
+		val := variant.Value()
 		p := mqttMessage{
 			Timestamp: time.Now(),
-			Value:     variant.Value(),
+			Value:     val,
+			Type:      fmt.Sprintf("%T", val),
 		}
 
 		j, err := json.Marshal(p)

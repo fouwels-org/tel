@@ -23,7 +23,10 @@ COPY . ./go
 RUN cd go && go install .
 
 FROM alpine:3.15.0
+RUN apk add --no-cache libcap
 COPY --from=build /build/out /build/out
+COPY --from=build /usr/local/lib/ /usr/local/lib/
+COPY --from=build /usr/local/include/ /usr/local/include/
 
 RUN addgroup -S tel && adduser -S tel -G tel
 USER tel
